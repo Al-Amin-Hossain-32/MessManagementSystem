@@ -1,0 +1,1145 @@
+// messmess — Prisma Schema
+// Database: PostgreSQL
+// All financial records are immutable after confirmation (status flags, never hard deletes)
+// All times stored as UTC
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum MessStatus {
+  PENDING_SETUP
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  ARCHIVED
+}
+
+enum MessMembershipRole {
+  PRIMARY_OWNER
+  CO_ADMIN
+}
+
+enum MessMembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum DirectorRelationshipStatus {
+  PENDING
+  ACTIVE
+  DECLINED
+  REVOKED
+  SUSPENDED
+  EXPIRED
+}
+
+enum BoarderMembershipStatus {
+  INVITED
+  PENDING_APPROVAL
+  ACTIVE
+  LEAVE_REQUESTED
+  ENDED
+  REMOVED
+}
+
+enum BoarderJoinVia {
+  ADMIN_INVITE
+  JOIN_REQUEST
+}
+
+enum BoarderResidencyType {
+  RESIDENT
+  MEAL_ONLY
+}
+
+enum ManagerAssignmentStatus {
+  PENDING_ACCEPTANCE
+  ACTIVE
+  COMPLETED
+  TERMINATED_EARLY
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  CUSTOM
+}
+
+enum MealRecordStatus {
+  DEFAULT_ON
+  OPTED_OUT
+  LOCKED
+  FINALIZED
+  CORRECTED
+}
+
+enum ExpenseDistributionMethod {
+  EQUAL_SPLIT
+  MEAL_PROPORTIONAL
+  DIRECT_CHARGE
+}
+
+enum ExpenseEligibleScope {
+  ALL
+  RESIDENT_ONLY
+  MEAL_ONLY
+  SELECTED_MEMBERS
+}
+
+enum ExpenseSourceType {
+  MANUAL_EXTERNAL
+  LINKED_SHOP
+  OTHER
+}
+
+enum ExpenseStatus {
+  DRAFT
+  DRAFT_FROM_SHOP
+  ACTIVE
+  REJECTED
+  REVERSED
+}
+
+enum PaymentMethod {
+  CASH
+  BKASH
+  NAGAD
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentChannel {
+  CASH_CHANNEL
+  DIGITAL_CHANNEL
+}
+
+enum PaymentStatus {
+  DRAFT
+  PENDING_CONFIRMATION
+  CONFIRMED
+  DISPUTED
+  REJECTED
+  REVERSED
+}
+
+enum AccountingPeriodStatus {
+  ACTIVE
+  PREPARING
+  UNDER_REVIEW
+  CLOSED
+}
+
+enum SubscriptionPlan {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  GRACE_PERIOD
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum FundHandoverStatus {
+  DRAFT
+  SUBMITTED
+  DISPUTED
+  ACCEPTED
+  ADJUSTED
+}
+
+enum GuestMealChargingPolicy {
+  CHARGE_TO_HOST
+  SHARED_POOL
+  CUSTOM_CONFIGURED
+}
+
+enum DisputeTargetType {
+  MEAL_RECORD
+  PAYMENT
+  EXPENSE_ALLOCATION
+  STATEMENT
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+  ESCALATED
+}
+
+enum ShopOrderStatus {
+  DRAFT
+  PLACED
+  CONFIRMED
+  PROCESSING
+  PARTIALLY_DELIVERED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum IntegrationEventType {
+  ORDER_DELIVERED
+  PARTIALLY_DELIVERED
+  REFUND_ISSUED
+}
+
+enum IntegrationProcessingStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  SKIPPED
+}
+
+enum ShopStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum BillingAccountStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum GuestMealStatus {
+  RECORDED
+  FINALIZED
+  DISPUTED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum AuditAction {
+  // Auth
+  USER_REGISTERED
+  USER_LOGIN
+  USER_LOGOUT
+  PASSWORD_CHANGED
+  // Mess
+  MESS_CREATED
+  MESS_UPDATED
+  MESS_STATUS_CHANGED
+  // Membership
+  MESS_MEMBERSHIP_INVITED
+  MESS_MEMBERSHIP_ACCEPTED
+  MESS_MEMBERSHIP_REVOKED
+  // Director
+  DIRECTOR_INVITED
+  DIRECTOR_ACCEPTED
+  DIRECTOR_REVOKED
+  DIRECTOR_SUSPENDED
+  // Boarder
+  BOARDER_INVITED
+  BOARDER_INVITE_DECLINED
+  BOARDER_JOIN_REQUESTED
+  BOARDER_JOIN_REJECTED
+  BOARDER_APPROVED
+  BOARDER_REMOVED
+  BOARDER_LEAVE_REQUESTED
+  BOARDER_LEFT
+  BOARDER_RESIDENCY_CHANGED
+  // Manager
+  MANAGER_ASSIGNED
+  MANAGER_ACCEPTED
+  MANAGER_COMPLETED
+  MANAGER_TERMINATED
+  // Meal
+  MEAL_CONFIG_UPDATED
+  MEAL_OPTED_OUT
+  MEAL_OPT_IN_REVERTED
+  MEAL_LOCKED
+  MEAL_CORRECTION_REQUESTED
+  MEAL_CORRECTED
+  MEAL_CORRECTION_REJECTED
+  MEAL_FINALIZED
+  GUEST_MEAL_RECORDED
+  GUEST_MEAL_DISPUTED
+  // Expense
+  EXPENSE_CATEGORY_CREATED
+  EXPENSE_CATEGORY_UPDATED
+  EXPENSE_CREATED
+  EXPENSE_CONFIRMED
+  EXPENSE_REJECTED
+  EXPENSE_REVERSED
+  EXPENSE_ALLOCATED
+  // Payment
+  PAYMENT_SUBMITTED
+  PAYMENT_CONFIRMED
+  PAYMENT_DISPUTED
+  PAYMENT_REJECTED
+  PAYMENT_REVERSED
+  // Accounting
+  PERIOD_CREATED
+  PERIOD_PREPARING
+  PERIOD_UNDER_REVIEW
+  PERIOD_CLOSED
+  PERIOD_ADJUSTMENT
+  // Dispute (generic — MEAL_RECORD | PAYMENT | EXPENSE_ALLOCATION | STATEMENT)
+  DISPUTE_RAISED
+  DISPUTE_RESOLVED
+  DISPUTE_DISMISSED
+  // Handover
+  HANDOVER_SUBMITTED
+  HANDOVER_ACCEPTED
+  HANDOVER_DISPUTED
+  HANDOVER_ADJUSTED
+  // Subscription
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_UPGRADED
+  SUBSCRIPTION_DOWNGRADED
+  SUBSCRIPTION_CANCELLED
+  SUBSCRIPTION_SUSPENDED
+  // Admin
+  PLATFORM_ADMIN_ACTION
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?  @unique
+  name         String
+  passwordHash String
+  isVerified   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  messMemberships      MessMembership[]
+  directorRelationships DirectorRelationship[]
+  boarderMemberships   BoarderMembership[]
+  managerAssignments   ManagerAssignment[]
+  refreshTokens        RefreshToken[]
+  auditLogs            AuditLog[]             @relation("AuditActor")
+
+  @@map("users")
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+// ─── Mess ─────────────────────────────────────────────────────────────────────
+
+model Mess {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  address     String?
+  description String?
+  status      MessStatus @default(PENDING_SETUP)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  memberships          MessMembership[]
+  directorRelationships DirectorRelationship[]
+  boarderMemberships   BoarderMembership[]
+  managerAssignments   ManagerAssignment[]
+  mealConfig           MessMealConfig?
+  guestMealConfig      MessGuestMealConfig?
+  expenseCategories    ExpenseCategory[]
+  accountingPeriods    AccountingPeriod[]
+  expenses             Expense[]
+  payments             Payment[]
+  guestMeals           GuestMeal[]
+  disputes             DisputeRecord[]
+  fundHandovers        FundHandover[]
+  shopLinks            MessShopLink[]
+  subscription         Subscription?
+  shopOrders           ShopOrder[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+
+  @@map("messes")
+}
+
+// ─── Mess Admin Membership ────────────────────────────────────────────────────
+
+model MessMembership {
+  id         String              @id @default(cuid())
+  userId     String
+  messId     String
+  role       MessMembershipRole
+  status     MessMembershipStatus @default(INVITED)
+  invitedBy  String?
+  acceptedAt DateTime?
+  revokedAt  DateTime?
+  revokedBy  String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  // Enforce one PRIMARY_OWNER per Mess at the application layer
+  // (partial unique index via migration SQL)
+  @@unique([userId, messId])
+  @@index([messId, status])
+  @@index([userId, status])
+  @@map("mess_memberships")
+}
+
+// ─── Director Relationship ────────────────────────────────────────────────────
+
+model DirectorRelationship {
+  id                String                     @id @default(cuid())
+  directorUserId    String
+  messId            String
+  status            DirectorRelationshipStatus @default(PENDING)
+  invitedBy         String // Primary Owner userId
+  invitedAt         DateTime                   @default(now())
+  acceptedAt        DateTime?
+  revokedAt         DateTime?
+  revokedBy         String?
+  suspendedAt       DateTime?
+  suspendedBy       String?
+  suspensionReason  String?
+  expiresAt         DateTime? // For pending invitations
+  updatedAt         DateTime                   @updatedAt
+
+  director User @relation(fields: [directorUserId], references: [id], onDelete: Restrict)
+  mess     Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  @@unique([directorUserId, messId])
+  @@index([directorUserId, status])
+  @@index([messId, status])
+  @@map("director_relationships")
+}
+
+// ─── Boarder Membership ───────────────────────────────────────────────────────
+
+model BoarderMembership {
+  id         String                @id @default(cuid())
+  userId     String
+  messId     String
+  status     BoarderMembershipStatus @default(INVITED)
+  joinedVia  BoarderJoinVia?
+  invitedBy  String?
+  inviteExpiresAt DateTime?
+  requestedAt DateTime?
+  approvedBy String?
+  joinedAt   DateTime?
+  leftAt     DateTime?
+  leftReason String?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  // Residency history (period-based)
+  residencies  BoarderResidency[]
+  mealRecords  MealRecord[]
+  payments     Payment[]
+  guestMeals   GuestMeal[]
+  allocations  ExpenseAllocation[]
+  statements   BoarderMonthlyStatement[]
+  disputes     DisputeRecord[]
+  directChargedExpenses Expense[] @relation("DirectChargeExpense")
+
+  @@index([userId, status])
+  @@index([messId, status])
+  // Partial unique index enforced via migration:
+  // CREATE UNIQUE INDEX ON boarder_memberships(user_id) WHERE status = 'ACTIVE'
+  @@map("boarder_memberships")
+}
+
+model BoarderResidency {
+  id                  String               @id @default(cuid())
+  boarderMembershipId String
+  messId              String
+  type                BoarderResidencyType
+  effectiveFrom       DateTime
+  effectiveTo         DateTime?
+  changedBy           String
+  reason              String?
+  createdAt           DateTime             @default(now())
+
+  boarderMembership BoarderMembership @relation(fields: [boarderMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([boarderMembershipId])
+  @@index([messId, effectiveFrom])
+  @@map("boarder_residencies")
+}
+
+// ─── Manager Assignment ───────────────────────────────────────────────────────
+
+model ManagerAssignment {
+  id                String                @id @default(cuid())
+  messId            String
+  userId            String
+  periodLabel       String
+  startDate         DateTime
+  endDate           DateTime
+  status            ManagerAssignmentStatus @default(PENDING_ACCEPTANCE)
+  assignedBy        String
+  assignedAt        DateTime              @default(now())
+  acceptedAt        DateTime?
+  terminatedAt      DateTime?
+  terminationReason String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  outgoingHandovers FundHandover[] @relation("OutgoingHandover")
+  incomingHandovers FundHandover[] @relation("IncomingHandover")
+
+  // Only one ACTIVE assignment per Mess enforced at application layer
+  // + DB partial unique index via migration
+  @@index([messId, status])
+  @@index([userId, status])
+  @@index([messId, startDate, endDate])
+  @@map("manager_assignments")
+}
+
+// ─── Mess Meal Configuration ──────────────────────────────────────────────────
+
+model MessMealConfig {
+  id            String   @id @default(cuid())
+  messId        String   @unique
+  effectiveFrom DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mess      Mess           @relation(fields: [messId], references: [id], onDelete: Restrict)
+  mealTypes MealTypeConfig[]
+
+  @@map("mess_meal_configs")
+}
+
+model MealTypeConfig {
+  id            String   @id @default(cuid())
+  mealConfigId  String
+  type          MealType
+  label         String
+  weight        Decimal  @db.Decimal(4, 2) // e.g. 0.5, 1.0
+  isActive      Boolean  @default(true)
+  // Opt-out deadline stored as "HH:MM" in Mess local time
+  // e.g., "08:00" = boarders must opt-out before 8:00 AM for lunch
+  optOutDeadline String
+
+  mealConfig MessMealConfig @relation(fields: [mealConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([mealConfigId, type])
+  @@map("meal_type_configs")
+}
+
+// ─── Guest Meal Configuration ─────────────────────────────────────────────────
+
+model MessGuestMealConfig {
+  id                  String                  @id @default(cuid())
+  messId              String                  @unique
+  chargingPolicy      GuestMealChargingPolicy @default(CHARGE_TO_HOST)
+  requiresGuestInfo   Boolean                 @default(false)
+  // Rate multiplier vs boarder meal rate (e.g., 1.0 = same rate, 1.5 = 1.5x)
+  rateMultiplier      Decimal                 @default(1.0) @db.Decimal(4, 2)
+  effectiveFrom       DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  @@map("mess_guest_meal_configs")
+}
+
+// ─── Accounting Period ────────────────────────────────────────────────────────
+
+model AccountingPeriod {
+  id                       String                @id @default(cuid())
+  messId                   String
+  periodLabel              String // "October 2025"
+  startDate                DateTime
+  endDate                  DateTime
+  status                   AccountingPeriodStatus @default(ACTIVE)
+  // Snapshots stored as JSON for immutable historical accuracy
+  mealConfigSnapshot       Json?
+  expenseCategorySnapshot  Json?
+  // Calculated on PREPARING
+  eligibleMealExpenseTotal Decimal?              @db.Decimal(12, 2)
+  totalFinalizedWeightedMeals Decimal?           @db.Decimal(10, 2)
+  finalMealRate            Decimal?              @db.Decimal(10, 4)
+  // Lifecycle timestamps
+  preparingAt              DateTime?
+  underReviewAt            DateTime?
+  closedAt                 DateTime?
+  closedBy                 String?
+  hasUnresolvedDisputes    Boolean               @default(false) // flagged on force-close
+  hasAccountingException  Boolean                @default(false) // zero-meal guard (SRS section17)
+  accountingExceptionReason String?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  mess       Mess                      @relation(fields: [messId], references: [id], onDelete: Restrict)
+  expenses   Expense[]
+  payments   Payment[]
+  mealRecords MealRecord[]
+  guestMeals GuestMeal[]
+  statements BoarderMonthlyStatement[]
+  disputes   DisputeRecord[]
+  adjustments PeriodAdjustment[]
+
+  @@unique([messId, periodLabel])
+  @@index([messId, status])
+  @@index([messId, startDate])
+  @@map("accounting_periods")
+}
+
+// ─── Meal Records ─────────────────────────────────────────────────────────────
+
+model MealRecord {
+  id                  String           @id @default(cuid())
+  messId              String
+  boarderMembershipId String
+  accountingPeriodId  String
+  date                DateTime         @db.Date
+  mealType            MealType
+  weight              Decimal          @db.Decimal(4, 2)
+  status              MealRecordStatus @default(DEFAULT_ON)
+  correctionRef       String? // ID of original record if this is a correction
+  correctionReason    String?
+  correctedBy         String?
+  correctedAt         DateTime?
+  lockedAt            DateTime?
+  finalizedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  boarderMembership BoarderMembership @relation(fields: [boarderMembershipId], references: [id], onDelete: Restrict)
+  accountingPeriod  AccountingPeriod  @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  correctionRequests MealCorrectionRequest[]
+
+  @@unique([boarderMembershipId, date, mealType])
+  @@index([messId, date])
+  @@index([messId, accountingPeriodId, status])
+  @@index([boarderMembershipId, accountingPeriodId])
+  @@map("meal_records")
+}
+
+// ─── Meal Correction Requests ───────────────────────────────────────────────────
+// A Boarder (post-deadline) or a Manager may request a correction to a MealRecord.
+// Because MealRecord has a unique(boarderMembershipId, date, mealType) constraint,
+// an approved correction updates that SAME row in place (weight/status) rather
+// than inserting a second row — the "original record preserved" requirement from
+// SRS §13 is satisfied by the AuditLog's previousState/newState snapshot taken
+// at approval time, not by a duplicate MealRecord row.
+
+enum MealCorrectionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MealCorrectionRequest {
+  id              String                      @id @default(cuid())
+  messId          String
+  mealRecordId    String
+  requestedBy     String
+  requestedStatus MealRecordStatus
+  requestedWeight Decimal?                    @db.Decimal(4, 2)
+  reason          String
+  status          MealCorrectionRequestStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  createdAt       DateTime                    @default(now())
+
+  mealRecord MealRecord @relation(fields: [mealRecordId], references: [id], onDelete: Restrict)
+
+  @@index([messId, status])
+  @@index([mealRecordId])
+  @@map("meal_correction_requests")
+}
+
+// ─── Expense Category ─────────────────────────────────────────────────────────
+
+model ExpenseCategory {
+  id                    String                    @id @default(cuid())
+  messId                String
+  name                  String
+  countsTowardMealRate  Boolean                   @default(false)
+  distributionMethod    ExpenseDistributionMethod
+  eligibleMemberScope   ExpenseEligibleScope      @default(ALL)
+  // Used only when eligibleMemberScope = SELECTED_MEMBERS. Postgres native
+  // array — no FK integrity per element (Prisma/Postgres limitation), so the
+  // service layer validates each id belongs to this Mess on write.
+  selectedMemberIds     String[]                  @default([])
+  isActive              Boolean                   @default(true)
+  createdBy             String
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  mess     Mess      @relation(fields: [messId], references: [id], onDelete: Restrict)
+  expenses Expense[]
+
+  @@unique([messId, name])
+  @@index([messId, isActive])
+  @@map("expense_categories")
+}
+
+// ─── Expense ──────────────────────────────────────────────────────────────────
+
+model Expense {
+  id                  String            @id @default(cuid())
+  messId              String
+  accountingPeriodId  String
+  categoryId          String
+  sourceType          ExpenseSourceType @default(MANUAL_EXTERNAL)
+  sourceShopOrderId   String?
+  amount              Decimal           @db.Decimal(12, 2)
+  description         String
+  date                DateTime          @db.Date
+  receiptRef          String?
+  status              ExpenseStatus     @default(ACTIVE)
+  recordedBy          String
+  confirmedBy         String?
+  confirmedAt         DateTime?
+  rejectedBy          String?
+  rejectionReason     String?
+  reversalRef         String?
+  // Required (validated at service layer) when category.distributionMethod
+  // = DIRECT_CHARGE — names which Boarder the full amount is charged to.
+  directChargeBoarderMembershipId String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  mess             Mess             @relation(fields: [messId], references: [id], onDelete: Restrict)
+  accountingPeriod AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  category         ExpenseCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  allocations      ExpenseAllocation[]
+  integrationRecord IntegrationRecord?
+  directChargeBoarder BoarderMembership? @relation("DirectChargeExpense", fields: [directChargeBoarderMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([messId, accountingPeriodId])
+  @@index([messId, status])
+  @@index([sourceShopOrderId])
+  @@map("expenses")
+}
+
+model ExpenseAllocation {
+  id                  String   @id @default(cuid())
+  expenseId           String
+  boarderMembershipId String
+  allocatedAmount     Decimal  @db.Decimal(12, 2)
+  // Snapshot of the calculation inputs for auditability
+  calculationSnapshot Json
+  createdAt           DateTime @default(now())
+
+  expense           Expense           @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  boarderMembership BoarderMembership @relation(fields: [boarderMembershipId], references: [id], onDelete: Restrict)
+
+  @@unique([expenseId, boarderMembershipId])
+  @@index([boarderMembershipId])
+  @@map("expense_allocations")
+}
+
+// ─── Guest Meal ───────────────────────────────────────────────────────────────
+
+model GuestMeal {
+  id                  String     @id @default(cuid())
+  messId              String
+  hostBoarderMembershipId String
+  accountingPeriodId  String
+  date                DateTime   @db.Date
+  mealType            MealType
+  quantity            Int        @default(1)
+  guestName           String?
+  guestInfo           Json?
+  appliedRate         Decimal    @db.Decimal(10, 4)
+  totalCharge         Decimal    @db.Decimal(12, 2)
+  chargedToHost       Boolean    @default(true) // false = charged to pool
+  status              GuestMealStatus @default(RECORDED)
+  recordedBy          String
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  mess              Mess              @relation(fields: [messId], references: [id], onDelete: Restrict)
+  hostBoarder       BoarderMembership @relation(fields: [hostBoarderMembershipId], references: [id], onDelete: Restrict)
+  accountingPeriod  AccountingPeriod  @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+
+  @@index([messId, accountingPeriodId])
+  @@index([hostBoarderMembershipId])
+  @@map("guest_meals")
+}
+
+// ─── Payment ──────────────────────────────────────────────────────────────────
+
+model Payment {
+  id                  String          @id @default(cuid())
+  messId              String
+  boarderMembershipId String
+  accountingPeriodId  String
+  amount              Decimal         @db.Decimal(12, 2)
+  method              PaymentMethod
+  channel             PaymentChannel
+  status              PaymentStatus   @default(PENDING_CONFIRMATION)
+  initiatedBy         String
+  initiatedAt         DateTime        @default(now())
+  transactionRef      String?
+  proofRef            String?
+  confirmedBy         String?
+  confirmedAt         DateTime?
+  rejectedBy          String?
+  rejectedAt          DateTime?
+  rejectionReason     String?
+  disputedBy          String?
+  disputedAt          DateTime?
+  reversalRef         String?
+  notes               String?
+  updatedAt           DateTime        @updatedAt
+
+  mess             Mess             @relation(fields: [messId], references: [id], onDelete: Restrict)
+  boarderMembership BoarderMembership @relation(fields: [boarderMembershipId], references: [id], onDelete: Restrict)
+  accountingPeriod AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+
+  @@index([messId, accountingPeriodId, status])
+  @@index([boarderMembershipId, status])
+  // Partial unique index via migration SQL:
+  // CREATE UNIQUE INDEX ON payments(mess_id, transaction_ref) WHERE transaction_ref IS NOT NULL
+  @@map("payments")
+}
+
+// ─── Boarder Monthly Statement ────────────────────────────────────────────────
+
+model BoarderMonthlyStatement {
+  id                    String   @id @default(cuid())
+  boarderMembershipId   String
+  accountingPeriodId    String
+  messId                String
+  // Calculated amounts
+  mealCost              Decimal  @db.Decimal(12, 2) @default(0)
+  guestMealCharge       Decimal  @db.Decimal(12, 2) @default(0)
+  totalExpenseAllocation Decimal @db.Decimal(12, 2) @default(0)
+  directCharges         Decimal  @db.Decimal(12, 2) @default(0)
+  openingBalance        Decimal  @db.Decimal(12, 2) @default(0) // positive = due, negative = credit
+  totalDue              Decimal  @db.Decimal(12, 2) @default(0)
+  confirmedPayments     Decimal  @db.Decimal(12, 2) @default(0)
+  closingBalance        Decimal  @db.Decimal(12, 2) @default(0) // positive = due, negative = credit
+  // Immutable calculation snapshot for audit
+  calculationSnapshot   Json
+  isAdjusted            Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  boarderMembership BoarderMembership @relation(fields: [boarderMembershipId], references: [id], onDelete: Restrict)
+  accountingPeriod  AccountingPeriod  @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+
+  @@unique([boarderMembershipId, accountingPeriodId])
+  @@index([accountingPeriodId])
+  @@map("boarder_monthly_statements")
+}
+
+// ─── Period Adjustment (post-close corrections) ───────────────────────────────
+
+model PeriodAdjustment {
+  id                 String   @id @default(cuid())
+  accountingPeriodId String
+  messId             String
+  targetType         String   // BOARDER_STATEMENT | EXPENSE | PAYMENT
+  targetId           String
+  reason             String
+  adjustedAmount     Decimal? @db.Decimal(12, 2)
+  approvedBy         String
+  appliedAt          DateTime @default(now())
+  notes              String?
+
+  accountingPeriod AccountingPeriod @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+
+  @@index([accountingPeriodId])
+  @@map("period_adjustments")
+}
+
+// ─── Fund Handover ────────────────────────────────────────────────────────────
+
+model FundHandover {
+  id                        String            @id @default(cuid())
+  messId                    String
+  outgoingAssignmentId      String
+  incomingAssignmentId      String?
+  declaredItems             Json              // Array of { type, declaredAmount, notes }
+  totalDeclaredAmount       Decimal           @db.Decimal(12, 2)
+  acceptedAmount            Decimal?          @db.Decimal(12, 2)
+  status                    FundHandoverStatus @default(DRAFT)
+  submittedAt               DateTime?
+  acceptedAt                DateTime?
+  disputeNotes              String?
+  adjustedAmount            Decimal?          @db.Decimal(12, 2)
+  resolvedBy                String?
+  resolvedAt                DateTime?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  mess               Mess              @relation(fields: [messId], references: [id], onDelete: Restrict)
+  outgoingAssignment ManagerAssignment @relation("OutgoingHandover", fields: [outgoingAssignmentId], references: [id], onDelete: Restrict)
+  incomingAssignment ManagerAssignment? @relation("IncomingHandover", fields: [incomingAssignmentId], references: [id], onDelete: Restrict)
+
+  @@index([messId])
+  @@index([outgoingAssignmentId])
+  @@map("fund_handovers")
+}
+
+// ─── Dispute Record ───────────────────────────────────────────────────────────
+
+model DisputeRecord {
+  id                  String            @id @default(cuid())
+  messId              String
+  accountingPeriodId  String?
+  raisedByBoarderId   String
+  targetType          DisputeTargetType
+  targetId            String
+  description         String
+  status              DisputeStatus     @default(OPEN)
+  resolution          String?
+  resolvedBy          String?
+  resolvedAt          DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  mess             Mess              @relation(fields: [messId], references: [id], onDelete: Restrict)
+  accountingPeriod AccountingPeriod? @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  raisedBy         BoarderMembership @relation(fields: [raisedByBoarderId], references: [id], onDelete: Restrict)
+
+  @@index([messId, status])
+  @@index([accountingPeriodId])
+  @@map("dispute_records")
+}
+
+// ─── Subscription & Billing ───────────────────────────────────────────────────
+
+model BillingAccount {
+  id           String   @id @default(cuid())
+  ownerUserId  String   @unique
+  billingEmail String
+  status       BillingAccountStatus @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("billing_accounts")
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  billingAccountId   String
+  messId             String             @unique
+  plan               SubscriptionPlan   @default(BASIC)
+  status             SubscriptionStatus @default(TRIAL)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  billingAccount BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Restrict)
+  mess           Mess           @relation(fields: [messId], references: [id], onDelete: Restrict)
+
+  @@index([billingAccountId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ─── Shop ─────────────────────────────────────────────────────────────────────
+
+model Shop {
+  id        String  @id @default(cuid())
+  name      String
+  isDefault Boolean @default(false)
+  status    ShopStatus @default(ACTIVE)
+  managedBy String
+
+  messLinks  MessShopLink[]
+  products   Product[]
+  orders     ShopOrder[]
+
+  @@map("shops")
+}
+
+model MessShopLink {
+  id        String   @id @default(cuid())
+  messId    String
+  shopId    String
+  isDefault Boolean  @default(true)
+  linkedAt  DateTime @default(now())
+
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Restrict)
+
+  @@unique([messId, shopId])
+  @@map("mess_shop_links")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  category    String?
+  unit        String
+  basePrice   Decimal  @db.Decimal(10, 2)
+  stockStatus String   @default("IN_STOCK")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop       Shop           @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  orderLines ShopOrderLine[]
+
+  @@index([shopId, isActive])
+  @@map("products")
+}
+
+model ShopOrder {
+  id              String          @id @default(cuid())
+  shopId          String
+  messId          String
+  placedBy        String
+  status          ShopOrderStatus @default(DRAFT)
+  totalAmount     Decimal         @db.Decimal(12, 2)
+  deliveredAmount Decimal         @db.Decimal(12, 2) @default(0)
+  refundedAmount  Decimal         @db.Decimal(12, 2) @default(0)
+  placedAt        DateTime?
+  deliveredAt     DateTime?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  shop              Shop               @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  mess              Mess               @relation(fields: [messId], references: [id], onDelete: Restrict)
+  orderLines        ShopOrderLine[]
+  integrationRecords IntegrationRecord[]
+
+  @@index([messId, status])
+  @@index([shopId, status])
+  @@map("shop_orders")
+}
+
+model ShopOrderLine {
+  id                 String  @id @default(cuid())
+  orderId            String
+  productId          String
+  productNameSnapshot String
+  unitPriceSnapshot  Decimal @db.Decimal(10, 2) // immutable price at order time
+  quantity           Decimal @db.Decimal(10, 3)
+  deliveredQuantity  Decimal @db.Decimal(10, 3) @default(0)
+  returnedQuantity   Decimal @db.Decimal(10, 3) @default(0)
+
+  order   ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("shop_order_lines")
+}
+
+// ─── Integration Bridge ───────────────────────────────────────────────────────
+
+model IntegrationRecord {
+  id                String                      @id @default(cuid())
+  shopOrderId       String
+  fulfillmentEventId String
+  eventType         IntegrationEventType
+  messId            String
+  messExpenseId     String?                     @unique
+  idempotencyKey    String                      @unique // shopOrderId + fulfillmentEventId
+  processingStatus  IntegrationProcessingStatus @default(PENDING)
+  processedAt       DateTime?
+  errorLog          Json?
+  createdAt         DateTime                    @default(now())
+
+  shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Restrict)
+  messExpense Expense?  @relation(fields: [messExpenseId], references: [id], onDelete: Restrict)
+
+  @@index([shopOrderId])
+  @@index([messId])
+  @@map("integration_records")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(cuid())
+  messId    String?
+  userId    String
+  channel   NotificationChannel
+  type      String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean             @default(false)
+  readAt    DateTime?
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  mess Mess? @relation(fields: [messId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@index([messId])
+  @@map("notifications")
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  messId        String?
+  actorUserId   String
+  actorRole     String?
+  action        AuditAction
+  targetType    String?
+  targetId      String?
+  previousState Json?
+  newState      Json?
+  ipAddress     String?
+  userAgent     String?
+  notes         String?
+  createdAt     DateTime    @default(now()) // Append-only; no updatedAt
+
+  mess  Mess? @relation(fields: [messId], references: [id], onDelete: SetNull)
+  actor User  @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([messId, createdAt])
+  @@index([actorUserId])
+  @@index([targetType, targetId])
+  @@index([action])
+  // AuditLog is append-only — no update operations permitted
+  @@map("audit_logs")
+}
