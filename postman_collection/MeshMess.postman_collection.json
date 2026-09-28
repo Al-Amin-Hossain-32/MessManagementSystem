@@ -1,0 +1,4046 @@
+{
+  "info": {
+    "_postman_id": "fcbedbdb-9d44-4efa-90f6-cb0bc2b33102",
+    "name": "MeshMess API \u2014 Phase 1-7",
+    "description": "Mess Management SaaS backend. Covers Auth, Mess/Boarder/Manager/Handover, Meal, Expense, Payment, the Accounting Engine, and the Shop domain + Shop-to-Mess Integration Bridge (Phase 1-7).\n\nFOUR ENVIRONMENTS (import all): MeshMess-Admin, MeshMess-Manager, MeshMess-Boarder, MeshMess-Shopadmin \u2014 each holds its own accessToken/userId. Switch the environment dropdown (top-right) whenever a request says '\u26a0\ufe0f switch to X' or '(as X)'.\n\nShared resource IDs (messId, expenseId, periodId, shopId, etc.) live in POSTMAN GLOBALS instead of any one environment, so they survive switching roles. Also import MeshMess.postman_globals.json \u2014 it populates automatically as you run requests (via each request's Tests script).\n\nPLATFORM ADMIN SETUP (one-time, before folder '14. Vendor & Shop' works): set PLATFORM_ADMIN_BOOTSTRAP_EMAILS=rafi@example.com in apps/api/.env, restart the server, then register Rafi \u2014 his account is created with platformRole=PLATFORM_ADMIN automatically.\n\nSUGGESTED ORDER:\n1. Auth > Register: run all FOUR Register requests once (any environment).\n2. Auth > Login: select each environment in turn and run its matching Login.\n3. Mess (as Admin): Create Mess.\n4. Boarder: Invite Nabil (as Admin) -> switch to Boarder env -> Accept Invite.\n5. Manager: Assign Karim (as Admin) -> switch to Manager env -> Accept Assignment.\n6. Meal Config (as Admin) -> Meal > Generate -> Opt Out (as Boarder).\n7. Expense Category + Expense (as Admin/Manager).\n8. Payment: Record Cash (as Manager) -> Confirm Cash (as Boarder).\n9. Accounting: Get Current Period -> Initiate Close -> Close Period (as Admin).\n10. Vendor & Shop (as Platform Admin/Shop Admin) -> Product Catalog (as Shop Admin).\n11. Shop Order: Create+Place (as Manager) -> Confirm+Process+Deliver (as Shop Admin) -> check Expense list (as Admin) for the auto-created DRAFT_FROM_SHOP entry.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register (run once each, any environment)",
+          "item": [
+            {
+              "name": "Register Admin (Rafi Ahmed)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Creates the admin persona's account. Safe to run from any environment \u2014 registration needs no token.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Rafi Ahmed\",\n  \"email\": \"rafi@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"phone\": \"01711000000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.globals.set('adminUserId', pm.response.json().data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register Manager (Karim Hasan)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Creates the manager persona's account. Safe to run from any environment \u2014 registration needs no token.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Karim Hasan\",\n  \"email\": \"karim@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"phone\": \"01711000000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.globals.set('managerUserId', pm.response.json().data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register Boarder (Nabil Islam)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Creates the boarder persona's account. Safe to run from any environment \u2014 registration needs no token.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Nabil Islam\",\n  \"email\": \"nabil@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"phone\": \"01711000000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.globals.set('boarderUserId', pm.response.json().data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register Shopadmin (Sajid Rahman)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Creates the shopadmin persona's account. Safe to run from any environment \u2014 registration needs no token.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sajid Rahman\",\n  \"email\": \"sajid@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"phone\": \"01711000000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.globals.set('shopadminUserId', pm.response.json().data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Login (select the matching environment first!)",
+          "item": [
+            {
+              "name": "Login as Admin (Rafi Ahmed)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "\u26a0\ufe0f Select the **Admin** environment (top-right dropdown) before running this \u2014 it saves accessToken/userId into whichever environment is currently active.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"rafi@example.com\",\n  \"password\": \"Passw0rd123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const data = pm.response.json().data;",
+                      "pm.environment.set('accessToken', data.tokens.accessToken);",
+                      "pm.environment.set('userId', data.user.id);",
+                      "pm.globals.set('adminUserId', data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login as Manager (Karim Hasan)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "\u26a0\ufe0f Select the **Manager** environment (top-right dropdown) before running this \u2014 it saves accessToken/userId into whichever environment is currently active.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"karim@example.com\",\n  \"password\": \"Passw0rd123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const data = pm.response.json().data;",
+                      "pm.environment.set('accessToken', data.tokens.accessToken);",
+                      "pm.environment.set('userId', data.user.id);",
+                      "pm.globals.set('managerUserId', data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login as Boarder (Nabil Islam)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "\u26a0\ufe0f Select the **Boarder** environment (top-right dropdown) before running this \u2014 it saves accessToken/userId into whichever environment is currently active.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nabil@example.com\",\n  \"password\": \"Passw0rd123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const data = pm.response.json().data;",
+                      "pm.environment.set('accessToken', data.tokens.accessToken);",
+                      "pm.environment.set('userId', data.user.id);",
+                      "pm.globals.set('boarderUserId', data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login as Shopadmin (Sajid Rahman)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "\u26a0\ufe0f Select the **Shopadmin** environment (top-right dropdown) before running this \u2014 it saves accessToken/userId into whichever environment is currently active.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"sajid@example.com\",\n  \"password\": \"Passw0rd123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const data = pm.response.json().data;",
+                      "pm.environment.set('accessToken', data.tokens.accessToken);",
+                      "pm.environment.set('userId', data.user.id);",
+                      "pm.globals.set('shopadminUserId', data.user.id);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "description": ""
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Reflects whichever environment/role is currently active."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Uses the HttpOnly refreshToken cookie set by the last Login call in this environment.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json().data;",
+                  "if (data && data.tokens) pm.environment.set('accessToken', data.tokens.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "1b. User Context",
+      "item": [
+        {
+          "name": "Get My Context (role discovery)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/context",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "context"
+              ]
+            },
+            "description": "Call this right after any Login. Returns every Mess role, active Manager assignment, Shop Admin status, and Platform Admin status for whichever persona is currently active."
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "2. Mess (as Admin)",
+      "item": [
+        {
+          "name": "Create Mess",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes"
+              ]
+            },
+            "description": "Run as Admin. Saves messId to Globals (shared by every role/environment).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Green Villa Bachelor Mess\",\n  \"address\": \"House 12, Road 5, Dhanmondi, Dhaka\",\n  \"description\": \"15-person bachelor mess\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.globals.set('messId', pm.response.json().data.mess.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Messes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Mess by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Update Mess",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"15-person bachelor mess \\u2014 updated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invite Co-Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/co-admins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "co-admins"
+              ]
+            },
+            "description": "Target email needs its own registered account first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"coadmin@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "3. Boarder",
+      "item": [
+        {
+          "name": "Invite Nabil as Boarder (run as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "invite"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nabil@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Invite (switch to Boarder environment!)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/accept-invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "accept-invite"
+              ]
+            },
+            "description": "\u26a0\ufe0f Select the **Boarder** environment before running this \u2014 Nabil accepts his own invite."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) pm.globals.set('boarderMembershipId', pm.response.json().data.membership.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decline Invite (as Boarder)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/decline-invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "decline-invite"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Join Request (as Boarder, alternative to invite)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/join-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "join-requests"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('boarderMembershipId', pm.response.json().data.membership.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Join Request (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/join-requests/{{boarderMembershipId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "join-requests",
+                "{{boarderMembershipId}}",
+                "approve"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Join Request (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/join-requests/{{boarderMembershipId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "join-requests",
+                "{{boarderMembershipId}}",
+                "reject"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Mess is currently full\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Boarders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members?status=ACTIVE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Mess (as Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "leave"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Moving out of the city\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "End Membership (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/{{boarderMembershipId}}/end",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "{{boarderMembershipId}}",
+                "end"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Confirmed move-out\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Residency (as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/members/{{boarderMembershipId}}/residency",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "members",
+                "{{boarderMembershipId}}",
+                "residency"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"MEAL_ONLY\",\n  \"reason\": \"Boarder moved out but keeps eating here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "4. Manager",
+      "item": [
+        {
+          "name": "Assign Karim as Manager (run as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers"
+              ]
+            },
+            "description": "Uses the {{managerUserId}} Global saved by 'Login as Manager' \u2014 Karim need not be a Boarder (SRS \u00a712).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{managerUserId}}\",\n  \"periodLabel\": \"October 2026\",\n  \"startDate\": \"2026-10-01T00:00:00.000Z\",\n  \"endDate\": \"2026-10-31T23:59:59.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('managerAssignmentId', pm.response.json().data.assignment.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept Assignment (switch to Manager environment!)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers/{{managerAssignmentId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers",
+                "{{managerAssignmentId}}",
+                "accept"
+              ]
+            },
+            "description": "\u26a0\ufe0f Select the **Manager** environment before running this."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Assignment",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers/{{managerAssignmentId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers",
+                "{{managerAssignmentId}}",
+                "complete"
+              ]
+            },
+            "description": "Only succeeds after endDate has passed."
+          },
+          "response": []
+        },
+        {
+          "name": "Terminate Assignment Early (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers/{{managerAssignmentId}}/terminate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers",
+                "{{managerAssignmentId}}",
+                "terminate"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Manager became unreachable\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/managers/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "managers",
+                "current"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "5. Fund Handover",
+      "item": [
+        {
+          "name": "Initiate Handover (as outgoing Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"declaredItems\": [\n    {\n      \"type\": \"CASH_IN_HAND\",\n      \"declaredAmount\": 4500,\n      \"notes\": \"Cash box count\"\n    },\n    {\n      \"type\": \"ADVANCE_FUND\",\n      \"declaredAmount\": 1000\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('handoverId', pm.response.json().data.handover.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Handover (as outgoing Manager)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers/{{handoverId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers",
+                "{{handoverId}}",
+                "submit"
+              ]
+            },
+            "description": "incomingAssignmentId needs a SECOND ManagerAssignment (a different person) \u2014 assign one more Manager first to test this fully.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"incomingAssignmentId\": \"{{managerAssignmentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Handover (as incoming Manager)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers/{{handoverId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers",
+                "{{handoverId}}",
+                "accept"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Dispute Handover (as incoming Manager)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers/{{handoverId}}/dispute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers",
+                "{{handoverId}}",
+                "dispute"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disputeNotes\": \"Counted only 4000, not 4500\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve Handover Dispute (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers/{{handoverId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers",
+                "{{handoverId}}",
+                "resolve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjustedAmount\": 4000,\n  \"notes\": \"Recounted with both parties present\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Handovers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Handover",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/handovers/{{handoverId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "handovers",
+                "{{handoverId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "6. Meal Config (as Admin)",
+      "item": [
+        {
+          "name": "Get Meal Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meal-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meal-config"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert Meal Config (as Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meal-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meal-config"
+              ]
+            },
+            "description": "Full replace \u2014 always send the complete set of meal types. Do this before Generate.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mealTypes\": [\n    {\n      \"type\": \"BREAKFAST\",\n      \"label\": \"Breakfast\",\n      \"weight\": 0.5,\n      \"isActive\": true,\n      \"optOutDeadline\": \"21:00\"\n    },\n    {\n      \"type\": \"LUNCH\",\n      \"label\": \"Lunch\",\n      \"weight\": 1.0,\n      \"isActive\": true,\n      \"optOutDeadline\": \"08:00\"\n    },\n    {\n      \"type\": \"DINNER\",\n      \"label\": \"Dinner\",\n      \"weight\": 1.0,\n      \"isActive\": true,\n      \"optOutDeadline\": \"16:00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "7. Meal",
+      "item": [
+        {
+          "name": "List Meals for Date (as Admin/Manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals?date=2026-10-05",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-05"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "My Meals for Date (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/mine?date=2026-10-05",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "mine"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-05"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "My Meal History (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/mine/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "mine",
+                "history"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Opt Out (as Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/opt-out",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "opt-out"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-05\",\n  \"mealType\": \"LUNCH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Opt In / Reverse (as Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/opt-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "opt-in"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-05\",\n  \"mealType\": \"LUNCH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Today's Meals (as Admin/Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "generate"
+              ]
+            },
+            "description": "Manual stand-in for the not-yet-wired daily cron job.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-05\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lock Expired Meals (as Admin/Manager)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/lock-expired",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "lock-expired"
+              ]
+            },
+            "description": "Manual stand-in for the not-yet-wired 15-min sweep cron job."
+          },
+          "response": []
+        },
+        {
+          "name": "List Correction Requests (as Admin/Manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/corrections?status=PENDING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "corrections"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Request Meal Correction (as Boarder)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/{{mealRecordId}}/corrections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "{{mealRecordId}}",
+                "corrections"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestedStatus\": \"OPTED_OUT\",\n  \"reason\": \"I was traveling and did not eat this meal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('correctionRequestId', pm.response.json().data.request.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Correction (as Admin/Manager, NOT the same Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/corrections/{{correctionRequestId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "corrections",
+                "{{correctionRequestId}}",
+                "approve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewNotes\": \"Confirmed with the Boarder\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Correction (as Admin/Manager)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/meals/corrections/{{correctionRequestId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "meals",
+                "corrections",
+                "{{correctionRequestId}}",
+                "reject"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewNotes\": \"No evidence of travel provided\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "8. Guest Meal",
+      "item": [
+        {
+          "name": "Get Guest Meal Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/guest-meals/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "guest-meals",
+                "config"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Upsert Guest Meal Config (as Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/guest-meals/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "guest-meals",
+                "config"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chargingPolicy\": \"CHARGE_TO_HOST\",\n  \"requiresGuestInfo\": false,\n  \"rateMultiplier\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Guest Meals (current period)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/guest-meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "guest-meals"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Record Guest Meal (as Admin/Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/guest-meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "guest-meals"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hostBoarderMembershipId\": \"{{boarderMembershipId}}\",\n  \"date\": \"2026-10-05\",\n  \"mealType\": \"DINNER\",\n  \"quantity\": 2,\n  \"guestName\": \"Nabil's cousins\",\n  \"appliedRate\": 80\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('guestMealId', pm.response.json().data.guestMeal.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute Guest Meal (as host Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/guest-meals/{{guestMealId}}/dispute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "guest-meals",
+                "{{guestMealId}}",
+                "dispute"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Only 1 guest ate, not 2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "9. Expense Category (as Admin)",
+      "item": [
+        {
+          "name": "List Expense Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expense-categories?activeOnly=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expense-categories"
+              ],
+              "query": [
+                {
+                  "key": "activeOnly",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expense-categories/{{expenseCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expense-categories",
+                "{{expenseCategoryId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category \u2014 Groceries (meal-rate, proportional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expense-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expense-categories"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Groceries\",\n  \"countsTowardMealRate\": true,\n  \"distributionMethod\": \"MEAL_PROPORTIONAL\",\n  \"eligibleMemberScope\": \"ALL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('expenseCategoryId', pm.response.json().data.category.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Category \u2014 Wifi Bill (non-meal, equal split)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expense-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expense-categories"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wifi Bill\",\n  \"countsTowardMealRate\": false,\n  \"distributionMethod\": \"EQUAL_SPLIT\",\n  \"eligibleMemberScope\": \"ALL\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense Category (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expense-categories/{{expenseCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expense-categories",
+                "{{expenseCategoryId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Groceries & Market\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "10. Expense",
+      "item": [
+        {
+          "name": "List Expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses?status=ACTIVE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "{{expenseId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense (as Manager/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{expenseCategoryId}}\",\n  \"amount\": 3500,\n  \"description\": \"Weekly bazar \\u2014 rice, vegetables, fish\",\n  \"date\": \"2026-10-05\",\n  \"asDraft\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('expenseId', pm.response.json().data.expense.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirm Draft Expense (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/{{expenseId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "{{expenseId}}",
+                "confirm"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Draft Expense (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/{{expenseId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "{{expenseId}}",
+                "reject"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate entry\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reverse Active Expense (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/{{expenseId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "{{expenseId}}",
+                "reverse"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Amount entered incorrectly\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recalculate Allocations (as Admin/Manager)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/allocations/{{periodId}}/recalculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "allocations",
+                "{{periodId}}",
+                "recalculate"
+              ]
+            },
+            "description": "Re-runs the Strategy-Pattern distribution engine \u2014 safe to call repeatedly mid-month."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Allocation Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/expenses/allocations/{{periodId}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "expenses",
+                "allocations",
+                "{{periodId}}",
+                "summary"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "11. Payment",
+      "item": [
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments?status=PENDING_CONFIRMATION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING_CONFIRMATION"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "My Payments (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Record Cash Payment (as Manager/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/cash",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "cash"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boarderMembershipId\": \"{{boarderMembershipId}}\",\n  \"amount\": 2000,\n  \"notes\": \"October advance, paid in person\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('paymentId', pm.response.json().data.payment.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirm Cash Payment (as the paying Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}/confirm-cash",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}",
+                "confirm-cash"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Dispute Cash Payment (as the paying Boarder)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}/dispute-cash",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}",
+                "dispute-cash"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"I paid 2500, not 2000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Digital Payment (as Boarder)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/digital",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "digital"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"BKASH\",\n  \"amount\": 2000,\n  \"transactionRef\": \"8N7K2M1Q9X\",\n  \"notes\": \"October payment via bKash\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Digital Payment (as Manager/Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}/verify-digital",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}",
+                "verify-digital"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"CONFIRMED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Resolve Payment (dispute / self-approval case)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}",
+                "resolve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"CONFIRMED\",\n  \"reason\": \"Verified with both parties\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reverse Confirmed Payment (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/payments/{{paymentId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "payments",
+                "{{paymentId}}",
+                "reverse"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate confirmation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "12. Dispute",
+      "item": [
+        {
+          "name": "List Disputes (as Admin/Manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes?status=OPEN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "OPEN"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "My Disputes (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dispute",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes/{{disputeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes",
+                "{{disputeId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Raise Dispute (as Boarder)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountingPeriodId\": \"{{periodId}}\",\n  \"targetType\": \"STATEMENT\",\n  \"targetId\": \"{{statementId}}\",\n  \"description\": \"My meal count looks wrong for the last week\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('disputeId', pm.response.json().data.dispute.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Under Review (as Manager/Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes/{{disputeId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes",
+                "{{disputeId}}",
+                "review"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve Dispute (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes/{{disputeId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes",
+                "{{disputeId}}",
+                "resolve"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"Corrected 2 missed OPTED_OUT records; statement will be regenerated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dismiss Dispute (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/disputes/{{disputeId}}/dismiss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "disputes",
+                "{{disputeId}}",
+                "dismiss"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Meal records were already correct on review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "13. Accounting (Periods & Statements)",
+      "item": [
+        {
+          "name": "Get Current Period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/current-period",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "current-period"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const p = pm.response.json().data.period; if (p) pm.globals.set('periodId', p.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Periods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Initiate Close (as Admin) \u2014 ACTIVE to PREPARING to UNDER_REVIEW",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/initiate-close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "initiate-close"
+              ]
+            },
+            "description": "Only succeeds after the period's endDate has passed. Finalizes meals, calculates meal rate, runs final expense allocation, generates statements."
+          },
+          "response": []
+        },
+        {
+          "name": "Close Period (as Admin) \u2014 UNDER_REVIEW to CLOSED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "close"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forceOverride\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Post-Close Adjustment (as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "adjustments"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"BOARDER_STATEMENT\",\n  \"targetId\": \"{{statementId}}\",\n  \"reason\": \"Late-arriving grocery receipt\",\n  \"adjustedAmount\": 150\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Adjustments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "adjustments"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "List Statements for Period (as Admin/Manager)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/statements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "statements"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const s = pm.response.json().data.statements; if (s && s.length) pm.globals.set('statementId', s[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get My Statement (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/periods/{{periodId}}/statements/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "periods",
+                "{{periodId}}",
+                "statements",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "My Statement History (as Boarder)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/statements/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "statements",
+                "history"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Statement by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/accounting/statements/{{statementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "accounting",
+                "statements",
+                "{{statementId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "14. Vendor & Shop",
+      "item": [
+        {
+          "name": "\u26a0\ufe0f Setup note: bootstrap Rafi as Platform Admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Before this folder works, set PLATFORM_ADMIN_BOOTSTRAP_EMAILS=rafi@example.com in apps/api/.env, restart the server, THEN run 'Register Admin' (or re-register with a fresh email) so Rafi's account is created with platformRole=PLATFORM_ADMIN. This request itself just confirms who you're logged in as \u2014 check the response's platformRole isn't returned here; use 'Get My Context' in folder 1 to verify."
+          },
+          "response": []
+        },
+        {
+          "name": "List Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vendors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Vendor (as Platform Admin, V2+ groundwork)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vendors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Northside Grocers\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Shops",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shop by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Default Shop (as Platform Admin, run once)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops"
+              ]
+            },
+            "description": "managedByUserId needs {{shopadminUserId}} \u2014 run 'Login as Shopadmin' first (folder 1) so Sajid's id is captured.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"MeshMess Daily Needs\",\n  \"managedByUserId\": \"{{shopadminUserId}}\",\n  \"isDefault\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('shopId', pm.response.json().data.shop.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Shop (as Shop Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"MeshMess Daily Needs \\u2014 Dhanmondi Branch\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reassign Shop Admin (as Platform Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "admin"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"managedByUserId\": \"{{shopadminUserId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "15. Product Catalog (as Shop Admin)",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "products"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Product \u2014 Rice (as Shop Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "products"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Miniket Rice\",\n  \"category\": \"Grocery\",\n  \"unit\": \"kg\",\n  \"basePrice\": 68,\n  \"stockStatus\": \"IN_STOCK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.globals.set('productId', pm.response.json().data.product.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Product \u2014 Cooking Oil (as Shop Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "products"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Soybean Oil\",\n  \"category\": \"Grocery\",\n  \"unit\": \"litre\",\n  \"basePrice\": 185,\n  \"stockStatus\": \"IN_STOCK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product (as Shop Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"basePrice\": 70,\n  \"stockStatus\": \"IN_STOCK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "16. Shop Order \u2014 Manager side",
+      "item": [
+        {
+          "name": "List Shop Orders (Mess side)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shop Order (Mess side)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders/{{shopOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders",
+                "{{shopOrderId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create Shop Order (as Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders"
+              ]
+            },
+            "description": "Requires 'shop-link' to exist \u2014 a Mess gets auto-linked to the default Shop on Mess creation (Phase 2 logic).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderLines\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 25\n    }\n  ],\n  \"notes\": \"Weekly rice restock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const order = pm.response.json().data.order;",
+                  "  pm.globals.set('shopOrderId', order.id);",
+                  "  if (order.orderLines && order.orderLines.length) pm.globals.set('orderLineId', order.orderLines[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Replace Order Lines (as Manager, DRAFT only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders/{{shopOrderId}}/lines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders",
+                "{{shopOrderId}}",
+                "lines"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderLines\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 30\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (as Manager) \u2014 DRAFT to PLACED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders/{{shopOrderId}}/place",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders",
+                "{{shopOrderId}}",
+                "place"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order (as Manager/Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-orders/{{shopOrderId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-orders",
+                "{{shopOrderId}}",
+                "cancel"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Ordered by mistake\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "17. Shop Order \u2014 Shop Admin fulfillment",
+      "item": [
+        {
+          "name": "List Shop Orders (Shop side)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shop Order (Shop side)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders/{{shopOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders",
+                "{{shopOrderId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Order (as Shop Admin) \u2014 PLACED to CONFIRMED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders/{{shopOrderId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders",
+                "{{shopOrderId}}",
+                "confirm"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Start Processing (as Shop Admin) \u2014 CONFIRMED to PROCESSING",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders/{{shopOrderId}}/process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders",
+                "{{shopOrderId}}",
+                "process"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Record Delivery (as Shop Admin) \u2014 triggers Integration Bridge",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders/{{shopOrderId}}/deliver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders",
+                "{{shopOrderId}}",
+                "deliver"
+              ]
+            },
+            "description": "deliveredQuantity is INCREMENTAL (this batch only). Creates a DRAFT_FROM_SHOP Expense automatically if messes/:messId/shop-link has a defaultExpenseCategoryId configured.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lines\": [\n    {\n      \"orderLineId\": \"{{orderLineId}}\",\n      \"deliveredQuantity\": 25\n    }\n  ],\n  \"notes\": \"Delivered in full\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refund Order (as Shop Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shops/{{shopId}}/orders/{{shopOrderId}}/refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shops",
+                "{{shopId}}",
+                "orders",
+                "{{shopOrderId}}",
+                "refund"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refundAmount\": 100,\n  \"reason\": \"2kg rice was damaged\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    },
+    {
+      "name": "18. Mess-Shop Link & Integration Retry",
+      "item": [
+        {
+          "name": "Get Mess-Shop Link",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-link"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Set Default Expense Category for Shop Purchases (as Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-link"
+              ]
+            },
+            "description": "MUST be set before 'Record Delivery' will succeed \u2014 otherwise the Integration Bridge creates a FAILED IntegrationRecord instead of a DRAFT_FROM_SHOP Expense.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultExpenseCategoryId\": \"{{expenseCategoryId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Failed Integrations (as Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-link/failed-integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-link",
+                "failed-integrations"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json().data.records; if (r && r.length) pm.globals.set('integrationRecordId', r[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retry Failed Integration (as Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messes/{{messId}}/shop-link/integrations/{{integrationRecordId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messes",
+                "{{messId}}",
+                "shop-link",
+                "integrations",
+                "{{integrationRecordId}}",
+                "retry"
+              ]
+            },
+            "description": "Replays the exact original delivery/refund payload \u2014 fix the root cause (e.g. set defaultExpenseCategoryId above) before retrying."
+          },
+          "response": []
+        }
+      ],
+      "description": ""
+    }
+  ]
+}

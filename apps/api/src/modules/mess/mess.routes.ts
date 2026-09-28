@@ -15,6 +15,8 @@ import { expenseCategoryRouter } from '../expense/expenseCategory.routes';
 import { expenseRouter } from '../expense/expense.routes';
 import { paymentRouter } from '../payment/payment.routes';
 import { disputeRouter } from '../dispute/dispute.routes';
+import { shopOrderRouter } from '../shop/shopOrder.routes';
+import { messShopLinkRouter } from '../shop/messShopLink.routes';
 import {
   createMessSchema,
   updateMessSchema,
@@ -127,5 +129,7 @@ router.use('/:messId/expense-categories', expenseCategoryRouter);
 router.use('/:messId/expenses', expenseRouter);
 router.use('/:messId/payments', paymentRouter);
 router.use('/:messId/disputes', disputeRouter);
+router.use('/:messId/shop-orders', shopOrderRouter);
+router.use('/:messId/shop-link', messShopLinkRouter);
 
 export { router as messRouter };

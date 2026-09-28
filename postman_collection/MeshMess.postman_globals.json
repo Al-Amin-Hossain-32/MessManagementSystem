@@ -1,0 +1,139 @@
+{
+  "id": "c990bce9-4675-45c1-b8ce-06b8dfe768a7",
+  "name": "MeshMess Globals",
+  "values": [
+    {
+      "key": "adminUserId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "managerUserId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "boarderUserId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "messId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "boarderMembershipId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "managerAssignmentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "handoverId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "mealRecordId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "correctionRequestId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "guestMealId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "expenseCategoryId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "disputeId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "periodId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "statementId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "vendorId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "shopId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "shopOrderId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "orderLineId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "integrationRecordId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "globals"
+}

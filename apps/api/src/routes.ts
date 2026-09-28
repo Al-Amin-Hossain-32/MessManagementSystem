@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { authRouter } from './modules/auth/auth.routes';
 import { messRouter } from './modules/mess/mess.routes';
+import { vendorRouter } from './modules/shop/vendor.routes';
+import { shopRouter } from './modules/shop/shop.routes';
+import { userRouter } from './modules/user/user.routes';
 
 const router = Router();
 
@@ -17,5 +20,8 @@ router.get('/health', (_req, res) => {
 
 router.use('/auth', authRouter);
 router.use('/messes', messRouter);
+router.use('/vendors', vendorRouter);
+router.use('/shops', shopRouter);
+router.use('/users', userRouter);
 
 export { router as apiRouter };

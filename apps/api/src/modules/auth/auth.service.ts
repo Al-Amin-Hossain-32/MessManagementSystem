@@ -2,8 +2,9 @@ import argon2 from 'argon2';
 import { prisma } from '../../lib/prisma';
 import { tokenService } from './token.service';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../../lib/errors';
-import { AuditAction } from '@messmess/types';
+import { AuditAction, PlatformRole } from '@messmess/types';
 import { auditService } from '../../lib/audit.service';
+import { env } from '../../config/env';
 
 export interface RegisterDto {
   name: string;
@@ -46,6 +47,8 @@ export class AuthService {
       parallelism: 1,
     });
 
+    const isBootstrapAdmin = env.PLATFORM_ADMIN_BOOTSTRAP_EMAILS.includes(dto.email.toLowerCase());
+
     const user = await prisma.user.create({
       data: {
         name: dto.name,
@@ -53,9 +56,20 @@ export class AuthService {
         phone: dto.phone ?? null,
         passwordHash,
         isVerified: false,
+        ...(isBootstrapAdmin && { platformRole: PlatformRole.PLATFORM_ADMIN }),
       },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, createdAt: true, platformRole: true },
     });
+
+    if (isBootstrapAdmin) {
+      await auditService.log({
+        actorUserId: user.id,
+        action: AuditAction.PLATFORM_ADMIN_GRANTED,
+        targetType: 'User',
+        targetId: user.id,
+        notes: 'Granted via PLATFORM_ADMIN_BOOTSTRAP_EMAILS on registration',
+      });
+    }
 
     await auditService.log({
       actorUserId: user.id,

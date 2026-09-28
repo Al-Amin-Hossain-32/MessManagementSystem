@@ -35,6 +35,17 @@ const envSchema = z.object({
     .default('false')
     .transform((val) => val === 'true'),
   COOKIE_SAME_SITE: z.enum(['strict', 'lax', 'none']).default('lax'),
+
+  // Platform Admin bootstrap — comma-separated emails auto-granted
+  // PLATFORM_ADMIN on registration. This is the ONLY way to create the first
+  // Platform Admin (there is no other bootstrap path by design — an open
+  // "make me admin" endpoint would be a privilege-escalation hole). Once at
+  // least one Platform Admin exists, further grants go through
+  // PATCH /admin/platform-admins/:userId (Platform-Admin-only).
+  PLATFORM_ADMIN_BOOTSTRAP_EMAILS: z
+    .string()
+    .default('')
+    .transform((val) => val.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)),
 });
 
 function validateEnv() {

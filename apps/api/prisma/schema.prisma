@@ -14,6 +14,11 @@ datasource db {
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
+enum PlatformRole {
+  NONE
+  PLATFORM_ADMIN
+}
+
 enum MessStatus {
   PENDING_SETUP
   ACTIVE
@@ -314,6 +319,25 @@ enum AuditAction {
   SUBSCRIPTION_SUSPENDED
   // Admin
   PLATFORM_ADMIN_ACTION
+  PLATFORM_ADMIN_GRANTED
+  PLATFORM_ADMIN_REVOKED
+  // Shop
+  VENDOR_CREATED
+  SHOP_CREATED
+  SHOP_UPDATED
+  SHOP_ADMIN_ASSIGNED
+  MESS_SHOP_LINK_UPDATED
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  SHOP_ORDER_CREATED
+  SHOP_ORDER_PLACED
+  SHOP_ORDER_STATUS_CHANGED
+  SHOP_ORDER_CANCELLED
+  SHOP_ORDER_DELIVERED
+  SHOP_ORDER_REFUNDED
+  INTEGRATION_PROCESSED
+  INTEGRATION_FAILED
+  INTEGRATION_RETRIED
 }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
@@ -326,6 +350,7 @@ model User {
   passwordHash String
   isVerified   Boolean  @default(false)
   isActive     Boolean  @default(true)
+  platformRole PlatformRole @default(NONE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -709,6 +734,7 @@ model ExpenseCategory {
 
   mess     Mess      @relation(fields: [messId], references: [id], onDelete: Restrict)
   expenses Expense[]
+  defaultForShopLinks MessShopLink[]
 
   @@unique([messId, name])
   @@index([messId, isActive])
@@ -981,13 +1007,43 @@ model Subscription {
 
 // ─── Shop ─────────────────────────────────────────────────────────────────────
 
+// ─── Vendor (multi-vendor marketplace readiness — SRS section23) ────────────────
+// V1 has exactly one auto-seeded, platform-owned Vendor. Stubbing this now
+// means the V2+ multi-vendor marketplace only needs new Vendor rows +
+// vendor-specific settlement — no Shop/Product/ShopOrder schema rewrite.
+
+enum VendorStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Vendor {
+  id              String       @id @default(cuid())
+  name            String
+  status          VendorStatus @default(ACTIVE)
+  isPlatformOwned Boolean      @default(true) // V1: always true (single vendor)
+  onboardedAt     DateTime     @default(now())
+
+  shops Shop[]
+
+  @@map("vendors")
+}
+
+enum StockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
 model Shop {
   id        String  @id @default(cuid())
+  vendorId  String
   name      String
   isDefault Boolean @default(false)
   status    ShopStatus @default(ACTIVE)
   managedBy String
 
+  vendor     Vendor         @relation(fields: [vendorId], references: [id], onDelete: Restrict)
   messLinks  MessShopLink[]
   products   Product[]
   orders     ShopOrder[]
@@ -1000,10 +1056,15 @@ model MessShopLink {
   messId    String
   shopId    String
   isDefault Boolean  @default(true)
+  // Which ExpenseCategory the Integration Bridge should file DRAFT_FROM_SHOP
+  // expenses under for this Mess+Shop pair. Required before the bridge can
+  // process a delivery event — see integrationBridge.service.ts.
+  defaultExpenseCategoryId String?
   linkedAt  DateTime @default(now())
 
   mess Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  defaultExpenseCategory ExpenseCategory? @relation(fields: [defaultExpenseCategoryId], references: [id], onDelete: SetNull)
 
   @@unique([messId, shopId])
   @@map("mess_shop_links")
@@ -1016,7 +1077,7 @@ model Product {
   category    String?
   unit        String
   basePrice   Decimal  @db.Decimal(10, 2)
-  stockStatus String   @default("IN_STOCK")
+  stockStatus StockStatus @default(IN_STOCK)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
