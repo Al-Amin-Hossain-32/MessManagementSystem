@@ -207,6 +207,18 @@ export enum DisputeStatus {
   ESCALATED = 'ESCALATED',
 }
 
+export enum DisputeTargetType {
+  MEAL_RECORD = 'MEAL_RECORD',
+  PAYMENT = 'PAYMENT',
+  EXPENSE_ALLOCATION = 'EXPENSE_ALLOCATION',
+  STATEMENT = 'STATEMENT',
+}
+
+export enum NotificationChannel {
+  IN_APP = 'IN_APP',
+  EMAIL = 'EMAIL',
+}
+
 export enum GuestMealChargingPolicy {
   CHARGE_TO_HOST = 'CHARGE_TO_HOST',
   SHARED_POOL = 'SHARED_POOL',

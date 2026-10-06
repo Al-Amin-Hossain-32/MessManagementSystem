@@ -14,7 +14,8 @@ import {
 interface FulfillmentEventPayload {
   shopOrderId: string;
   fulfillmentEventId: string;
-  eventType: typeof IntegrationEventType.ORDER_DELIVERED | typeof IntegrationEventType.PARTIALLY_DELIVERED;
+  eventType:
+    typeof IntegrationEventType.ORDER_DELIVERED | typeof IntegrationEventType.PARTIALLY_DELIVERED;
   /** The INCREMENTAL value delivered in this one batch — not cumulative. */
   deliveredAmount: number;
   triggeredByUserId: string;
@@ -26,6 +27,28 @@ interface RefundEventPayload {
   refundAmount: number;
   reason: string;
   triggeredByUserId: string;
+}
+
+function serializeEventPayload(
+  payload: FulfillmentEventPayload | RefundEventPayload,
+): Prisma.InputJsonObject {
+  if ('eventType' in payload) {
+    return {
+      shopOrderId: payload.shopOrderId,
+      fulfillmentEventId: payload.fulfillmentEventId,
+      eventType: payload.eventType,
+      deliveredAmount: payload.deliveredAmount,
+      triggeredByUserId: payload.triggeredByUserId,
+    };
+  }
+
+  return {
+    shopOrderId: payload.shopOrderId,
+    fulfillmentEventId: payload.fulfillmentEventId,
+    refundAmount: payload.refundAmount,
+    reason: payload.reason,
+    triggeredByUserId: payload.triggeredByUserId,
+  };
 }
 
 class IntegrationBridgeService {
@@ -140,7 +163,9 @@ class IntegrationBridgeService {
     const linkedRecord = await prisma.integrationRecord.findFirst({
       where: {
         shopOrderId: payload.shopOrderId,
-        eventType: { in: [IntegrationEventType.ORDER_DELIVERED, IntegrationEventType.PARTIALLY_DELIVERED] },
+        eventType: {
+          in: [IntegrationEventType.ORDER_DELIVERED, IntegrationEventType.PARTIALLY_DELIVERED],
+        },
         processingStatus: IntegrationProcessingStatus.PROCESSED,
         messExpenseId: { not: null },
       },
@@ -267,7 +292,7 @@ class IntegrationBridgeService {
         messId,
         idempotencyKey,
         processingStatus: IntegrationProcessingStatus.FAILED,
-        errorLog: { ...error, payload } as Prisma.InputJsonValue,
+        errorLog: { ...error, payload: serializeEventPayload(payload) },
       },
     });
 
@@ -290,13 +315,17 @@ class IntegrationBridgeService {
    * re-supply anything.
    */
   async retryIntegration(messId: string, adminUserId: string, integrationRecordId: string) {
-    const record = await prisma.integrationRecord.findUnique({ where: { id: integrationRecordId } });
+    const record = await prisma.integrationRecord.findUnique({
+      where: { id: integrationRecordId },
+    });
     if (!record || record.messId !== messId) throw new NotFoundError('IntegrationRecord');
     if (record.processingStatus !== IntegrationProcessingStatus.FAILED) {
       throw new ConflictError('Only a FAILED integration record can be retried');
     }
 
-    const errorLog = record.errorLog as { payload?: FulfillmentEventPayload | RefundEventPayload } | null;
+    const errorLog = record.errorLog as {
+      payload?: FulfillmentEventPayload | RefundEventPayload;
+    } | null;
     if (!errorLog?.payload) {
       throw new ConflictError(
         'This record has no replayable payload (created before retry support was added)',

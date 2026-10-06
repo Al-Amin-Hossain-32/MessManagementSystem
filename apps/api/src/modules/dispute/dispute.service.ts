@@ -4,7 +4,7 @@ import { NotFoundError, ConflictError, ForbiddenError } from '../../lib/errors';
 import { BoarderMembershipStatus, DisputeStatus, AuditAction } from '@messmess/types';
 import type { RaiseDisputeDto } from './dispute.schema';
 
-const REVIEWABLE_STATUSES: DisputeStatus[] = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW];
+const REVIEWABLE_STATUSES: readonly string[] = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW];
 
 class DisputeService {
   /** An active Boarder raises a dispute against a Meal/Payment/Expense/Statement record. */

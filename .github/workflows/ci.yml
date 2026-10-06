@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema apps/api/prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      - name: Generate Prisma Client
+        run: npm run db:generate --workspace=@messmess/api
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      - name: Type-check API and web
+        run: |
+          npm run type-check --workspace=@messmess/api
+          npm run type-check --workspace=@messmess/web
+      - name: Run API unit tests
+        run: npm test --workspace=@messmess/api
+      - name: Build API
+        run: npm run build --workspace=@messmess/api
+      - name: Build web
+        run: npm run build --workspace=@messmess/web
+        env:
+          API_ORIGIN: https://api.example.invalid
+          NEXT_PUBLIC_SOCKET_URL: https://api.example.invalid

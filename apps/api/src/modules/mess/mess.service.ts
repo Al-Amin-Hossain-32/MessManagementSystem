@@ -1,11 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { auditService } from '../../lib/audit.service';
-import {
-  ConflictError,
-  NotFoundError,
-  ForbiddenError,
-  UnprocessableError,
-} from '../../lib/errors';
+import { ConflictError, NotFoundError, ForbiddenError, UnprocessableError } from '../../lib/errors';
 import {
   MessStatus,
   MessMembershipRole,
@@ -35,7 +30,7 @@ export class MessService {
       slug = `${slug}-${Date.now()}`;
     }
 
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Create the Mess
       const mess = await tx.mess.create({
         data: {
@@ -186,7 +181,7 @@ export class MessService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return memberships.map((m: typeof memberships[number]) => ({
+    return memberships.map((m: (typeof memberships)[number]) => ({
       mess: m.mess,
       role: m.role,
     }));

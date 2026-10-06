@@ -1,19 +1,20 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { auditService } from '../../lib/audit.service';
+import { NotFoundError, ConflictError, ActiveMembershipConflictError } from '../../lib/errors';
 import {
-  NotFoundError,
-  ConflictError,
-  ActiveMembershipConflictError,
-} from '../../lib/errors';
-import { BoarderMembershipStatus, BoarderJoinVia, AuditAction, NotificationType } from '@messmess/types';
+  BoarderMembershipStatus,
+  BoarderJoinVia,
+  AuditAction,
+  NotificationType,
+} from '@messmess/types';
 import type { InviteBoarderDto, ResidencyChangeDto } from './boarder.schema';
 import { notificationService } from '../notification/notification.service';
 
 const INVITE_EXPIRY_DAYS = 7;
 
 /** Statuses that count as "already in the pipeline" for a given Mess. */
-const IN_FLIGHT_STATUSES: BoarderMembershipStatus[] = [
+const IN_FLIGHT_STATUSES: readonly string[] = [
   BoarderMembershipStatus.INVITED,
   BoarderMembershipStatus.PENDING_APPROVAL,
   BoarderMembershipStatus.ACTIVE,
@@ -42,9 +43,7 @@ class BoarderService {
       orderBy: { createdAt: 'desc' },
     });
     if (existing && IN_FLIGHT_STATUSES.includes(existing.status)) {
-      throw new ConflictError(
-        'This user already has a pending or active membership in this Mess',
-      );
+      throw new ConflictError('This user already has a pending or active membership in this Mess');
     }
 
     const inviteExpiresAt = new Date();
@@ -140,9 +139,7 @@ class BoarderService {
       orderBy: { createdAt: 'desc' },
     });
     if (existing && IN_FLIGHT_STATUSES.includes(existing.status)) {
-      throw new ConflictError(
-        'You already have a pending or active membership in this Mess',
-      );
+      throw new ConflictError('You already have a pending or active membership in this Mess');
     }
 
     const membership = await prisma.boarderMembership.create({
@@ -236,8 +233,7 @@ class BoarderService {
     messId: string,
     membershipId: string,
     expectedStatus:
-      | typeof BoarderMembershipStatus.INVITED
-      | typeof BoarderMembershipStatus.PENDING_APPROVAL,
+      typeof BoarderMembershipStatus.INVITED | typeof BoarderMembershipStatus.PENDING_APPROVAL,
     actorUserId: string,
     auditAction: AuditAction,
   ) {
@@ -350,12 +346,7 @@ class BoarderService {
    * Mess policy — SRS §35 edge case "Boarder leaves Mess mid-month". Deferred
    * here since MealRecord does not exist yet; do not forget this when Phase 3 lands.
    */
-  async endMembership(
-    messId: string,
-    adminUserId: string,
-    membershipId: string,
-    reason?: string,
-  ) {
+  async endMembership(messId: string, adminUserId: string, membershipId: string, reason?: string) {
     const membership = await prisma.boarderMembership.findUnique({
       where: { id: membershipId },
     });
@@ -366,9 +357,7 @@ class BoarderService {
       membership.status !== BoarderMembershipStatus.ACTIVE &&
       membership.status !== BoarderMembershipStatus.LEAVE_REQUESTED
     ) {
-      throw new ConflictError(
-        'Only an active or leave-requested membership can be ended',
-      );
+      throw new ConflictError('Only an active or leave-requested membership can be ended');
     }
 
     const updated = await prisma.boarderMembership.update({

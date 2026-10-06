@@ -1,5 +1,30 @@
 /** @type {import('next').NextConfig} */
 const API_ORIGIN = process.env.API_ORIGIN || 'http://localhost:4000';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+
+function isLoopbackHostname(hostname) {
+  const normalized = hostname.toLowerCase().replace(/\.$/, '');
+  return (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    /^127(?:\.\d{1,3}){3}$/.test(normalized) ||
+    normalized === '[::1]' ||
+    normalized === '::1' ||
+    normalized === '0.0.0.0'
+  );
+}
+
+if (process.env.NODE_ENV === 'production') {
+  for (const [name, value] of [
+    ['API_ORIGIN', API_ORIGIN],
+    ['NEXT_PUBLIC_SOCKET_URL', SOCKET_URL],
+  ]) {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || isLoopbackHostname(url.hostname)) {
+      throw new Error(`${name} must be a public HTTPS URL for production builds`);
+    }
+  }
+}
 
 const nextConfig = {
   reactStrictMode: true,

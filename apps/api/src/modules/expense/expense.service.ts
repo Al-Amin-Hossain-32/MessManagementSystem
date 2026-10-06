@@ -17,7 +17,7 @@ function parseDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
 }
 
-const DRAFT_STATUSES: ExpenseStatus[] = [ExpenseStatus.DRAFT, ExpenseStatus.DRAFT_FROM_SHOP];
+const DRAFT_STATUSES: readonly string[] = [ExpenseStatus.DRAFT, ExpenseStatus.DRAFT_FROM_SHOP];
 
 class ExpenseService {
   async createExpense(messId: string, actorUserId: string, dto: CreateExpenseDto) {
@@ -115,7 +115,9 @@ class ExpenseService {
     const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
     if (!expense || expense.messId !== messId) throw new NotFoundError('Expense');
     if (!DRAFT_STATUSES.includes(expense.status)) {
-      throw new ConflictError('Only a DRAFT expense can be rejected — use reversal for an ACTIVE one');
+      throw new ConflictError(
+        'Only a DRAFT expense can be rejected — use reversal for an ACTIVE one',
+      );
     }
 
     const updated = await prisma.expense.update({
@@ -200,7 +202,9 @@ class ExpenseService {
       where: { id: expenseId },
       include: {
         category: true,
-        allocations: { include: { boarderMembership: { include: { user: { select: { name: true } } } } } },
+        allocations: {
+          include: { boarderMembership: { include: { user: { select: { name: true } } } } },
+        },
       },
     });
     if (!expense || expense.messId !== messId) throw new NotFoundError('Expense');
