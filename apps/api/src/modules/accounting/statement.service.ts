@@ -108,15 +108,17 @@ class StatementService {
       include: { boarderMembership: { include: { user: { select: { id: true, name: true } } } } },
     });
     if (!statement || statement.messId !== messId) throw new NotFoundError('Statement');
-    return statement;
+    return (await this.withCurrentPaymentTotals(messId, [statement]))[0];
   }
 
   async listStatementsForPeriod(messId: string, periodId: string) {
-    return prisma.boarderMonthlyStatement.findMany({
+    const statements = await prisma.boarderMonthlyStatement.findMany({
       where: { messId, accountingPeriodId: periodId },
       include: { boarderMembership: { include: { user: { select: { id: true, name: true } } } } },
       orderBy: { closingBalance: 'desc' },
     });
+    const refreshed = await this.withCurrentPaymentTotals(messId, statements);
+    return refreshed.sort((a, b) => b.closingBalance.comparedTo(a.closingBalance));
   }
 
   async getMyStatement(messId: string, userId: string, periodId: string) {
@@ -124,19 +126,64 @@ class StatementService {
       where: { messId, accountingPeriodId: periodId, boarderMembership: { userId } },
     });
     if (!statement) throw new NotFoundError('Statement');
-    return statement;
+    return (await this.withCurrentPaymentTotals(messId, [statement]))[0];
   }
 
   async getMyStatementHistory(messId: string, userId: string, limit = 12) {
-    return prisma.boarderMonthlyStatement.findMany({
+    const statements = await prisma.boarderMonthlyStatement.findMany({
       where: { messId, boarderMembership: { userId } },
       include: { accountingPeriod: { select: { periodLabel: true, status: true } } },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    return this.withCurrentPaymentTotals(messId, statements);
   }
 
   // ─── Aggregation helpers ────────────────────────────────────────────────────
+
+  private async withCurrentPaymentTotals<
+    T extends {
+      boarderMembershipId: string;
+      accountingPeriodId: string;
+      confirmedPayments: Prisma.Decimal;
+      closingBalance: Prisma.Decimal;
+    },
+  >(messId: string, statements: T[]): Promise<T[]> {
+    if (statements.length === 0) return statements;
+
+    const totals = await prisma.payment.groupBy({
+      by: ['boarderMembershipId', 'accountingPeriodId'],
+      where: {
+        messId,
+        boarderMembershipId: {
+          in: [...new Set(statements.map((statement) => statement.boarderMembershipId))],
+        },
+        accountingPeriodId: {
+          in: [...new Set(statements.map((statement) => statement.accountingPeriodId))],
+        },
+        status: PaymentStatus.CONFIRMED,
+      },
+      _sum: { amount: true },
+    });
+    const currentTotals = new Map(
+      totals.map((row) => [
+        `${row.boarderMembershipId}:${row.accountingPeriodId}`,
+        new Prisma.Decimal(row._sum.amount ?? 0),
+      ]),
+    );
+
+    return statements.map((statement) => {
+      const currentConfirmedPayments =
+        currentTotals.get(`${statement.boarderMembershipId}:${statement.accountingPeriodId}`) ??
+        new Prisma.Decimal(0);
+      const paymentDelta = currentConfirmedPayments.sub(statement.confirmedPayments);
+      return {
+        ...statement,
+        confirmedPayments: currentConfirmedPayments,
+        closingBalance: statement.closingBalance.sub(paymentDelta),
+      };
+    });
+  }
 
   private async collectActiveBoarderIds(messId: string, periodId: string): Promise<Set<string>> {
     const [meals, allocations, payments, guestHosts] = await Promise.all([

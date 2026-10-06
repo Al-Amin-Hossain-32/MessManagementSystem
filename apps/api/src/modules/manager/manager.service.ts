@@ -2,8 +2,10 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { auditService } from '../../lib/audit.service';
 import { NotFoundError, ConflictError, ForbiddenError } from '../../lib/errors';
-import { ManagerAssignmentStatus, AuditAction } from '@messmess/types';
+import { ManagerAssignmentStatus, AuditAction, NotificationType } from '@messmess/types';
 import type { AssignManagerDto } from './manager.schema';
+import { notificationService } from '../notification/notification.service';
+import { isManagerAssignmentInPeriod } from '../../lib/managerPeriod';
 
 /** Statuses that block a new assignment from being created for the same Mess. */
 const IN_FLIGHT_STATUSES: ManagerAssignmentStatus[] = [
@@ -63,7 +65,14 @@ class ManagerService {
         newState: { userId: dto.userId, periodLabel: dto.periodLabel },
       });
 
-      // TODO(notifications): "Manager assignment" event — SRS §25.
+      await notificationService.notifyUser({
+        userId: targetUser.id,
+        messId,
+        eventId: `manager.assigned:${assignment.id}`,
+        type: NotificationType.MANAGER_ASSIGNED,
+        href: '/dashboard',
+        params: { period: assignment.periodLabel },
+      });
 
       return assignment;
     } catch (err: unknown) {
@@ -193,16 +202,17 @@ class ManagerService {
   }
 
   async getCurrentManager(messId: string) {
-    const now = new Date();
-    return prisma.managerAssignment.findFirst({
+    const assignments = await prisma.managerAssignment.findMany({
       where: {
         messId,
         status: ManagerAssignmentStatus.ACTIVE,
-        startDate: { lte: now },
-        endDate: { gte: now },
       },
       include: { user: { select: { id: true, name: true, email: true, phone: true } } },
+      orderBy: { assignedAt: 'desc' },
     });
+    return assignments.find((assignment) =>
+      isManagerAssignmentInPeriod(assignment.startDate, assignment.endDate),
+    ) ?? null;
   }
 
   async listAssignments(messId: string) {

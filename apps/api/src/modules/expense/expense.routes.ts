@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { expenseService } from './expense.service';
 import { expenseAllocationService } from './expenseAllocation.service';
-import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
+import { resolveTenant, resolveTenantForDirectorRead, requireMessAdmin, requireManagerOrAdminOrDirectorRead } from '../../middleware/resolveTenant';
 import { requireManagerOrAdmin } from '../../middleware/requireManager';
 import { validate } from '../../middleware/validate';
 import {
@@ -17,7 +17,7 @@ const router = Router({ mergeParams: true });
 // GET /api/v1/messes/:messId/expenses?accountingPeriodId=&status=
 router.get(
   '/',
-  resolveTenant,
+  resolveTenantForDirectorRead,
   validate(listExpensesQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -32,7 +32,7 @@ router.get(
 // GET /api/v1/messes/:messId/expenses/:expenseId
 router.get(
   '/:expenseId',
-  resolveTenant,
+  resolveTenantForDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const expense = await expenseService.getExpense(req.tenant.messId, req.params.expenseId);
@@ -150,7 +150,8 @@ router.post(
 // GET /api/v1/messes/:messId/expenses/allocations/:periodId/summary — per-Boarder totals
 router.get(
   '/allocations/:periodId/summary',
-  resolveTenant,
+  resolveTenantForDirectorRead,
+  requireManagerOrAdminOrDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const summary = await expenseAllocationService.getAllocationSummaryForPeriod(

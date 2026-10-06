@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { messService } from './mess.service';
 import { authenticate } from '../../middleware/authenticate';
-import { resolveTenant, requirePrimaryOwner } from '../../middleware/resolveTenant';
+import { resolveTenant, resolveTenantLoose, requirePrimaryOwner } from '../../middleware/resolveTenant';
 import { validate } from '../../middleware/validate';
 import { boarderRouter } from '../boarder/boarder.routes';
 import { managerRouter } from '../manager/manager.routes';
@@ -17,6 +17,10 @@ import { paymentRouter } from '../payment/payment.routes';
 import { disputeRouter } from '../dispute/dispute.routes';
 import { shopOrderRouter } from '../shop/shopOrder.routes';
 import { messShopLinkRouter } from '../shop/messShopLink.routes';
+import { chatRouter } from '../chat/chat.routes';
+import { billingRouter } from '../billing/billing.routes';
+import { auditRouter } from '../audit/audit.routes';
+import { directorRouter } from '../director/director.routes';
 import {
   createMessSchema,
   updateMessSchema,
@@ -50,6 +54,30 @@ router.post(
         data: { mess },
         message: 'Mess created successfully',
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// PATCH(frontend) GET /api/v1/messes/by-slug/:slug — lets a would-be boarder find a Mess to join
+router.get('/by-slug/:slug', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const mess = await messService.findPublicBySlug(req.params.slug);
+    res.json({ success: true, data: { mess } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH(frontend) POST /api/v1/messes/:messId/co-admins/accept — invited Co-Admin accepts
+router.post(
+  '/:messId/co-admins/accept',
+  resolveTenantLoose,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const membership = await messService.acceptCoAdminInvite(req.tenant.messId, req.auth.userId);
+      res.json({ success: true, data: { membership }, message: 'Co-Admin invitation accepted' });
     } catch (err) {
       next(err);
     }
@@ -129,6 +157,10 @@ router.use('/:messId/expense-categories', expenseCategoryRouter);
 router.use('/:messId/expenses', expenseRouter);
 router.use('/:messId/payments', paymentRouter);
 router.use('/:messId/disputes', disputeRouter);
+router.use('/:messId/chat', chatRouter);
+router.use('/:messId/billing', billingRouter);
+router.use('/:messId/audit', auditRouter);
+router.use('/:messId/directors', directorRouter);
 router.use('/:messId/shop-orders', shopOrderRouter);
 router.use('/:messId/shop-link', messShopLinkRouter);
 

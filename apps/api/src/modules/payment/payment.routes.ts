@@ -1,9 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { paymentService } from './payment.service';
-import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
+import { resolveTenant, resolveTenantForDirectorRead, requireMessAdmin, requireManagerOrAdminOrDirectorRead } from '../../middleware/resolveTenant';
 import { requireManagerOrAdmin } from '../../middleware/requireManager';
 import { validate } from '../../middleware/validate';
+import { assertSelfOrStaff } from '../../lib/messAuthz';
 import {
   recordCashPaymentSchema,
   submitDigitalPaymentSchema,
@@ -20,12 +21,28 @@ const router = Router({ mergeParams: true });
 // GET /api/v1/messes/:messId/payments?accountingPeriodId=&status=
 router.get(
   '/',
-  resolveTenant,
+  resolveTenantForDirectorRead,
+  requireManagerOrAdminOrDirectorRead, // boarders use /mine; active Directors have read-only access
   validate(listPaymentsQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payments = await paymentService.listPayments(req.tenant.messId, req.query as any);
       res.json({ success: true, data: { payments } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// GET /api/v1/messes/:messId/payments/fund-summary
+router.get(
+  '/fund-summary',
+  resolveTenantForDirectorRead,
+  requireManagerOrAdminOrDirectorRead,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const summary = await paymentService.getFundSummary(req.tenant.messId);
+      res.json({ success: true, data: summary });
     } catch (err) {
       next(err);
     }
@@ -45,10 +62,13 @@ router.get('/mine', resolveTenant, async (req: Request, res: Response, next: Nex
 // GET /api/v1/messes/:messId/payments/:paymentId
 router.get(
   '/:paymentId',
-  resolveTenant,
+  resolveTenantForDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payment = await paymentService.getPayment(req.tenant.messId, req.params.paymentId);
+      if (!req.tenant.isDirector) {
+        await assertSelfOrStaff(req.tenant.messId, req.auth.userId, payment.boarderMembershipId);
+      }
       res.json({ success: true, data: { payment } });
     } catch (err) {
       next(err);

@@ -5,12 +5,15 @@ import { periodService } from '../accounting/period.service';
 import { NotFoundError, ConflictError, ForbiddenError, SelfApprovalError } from '../../lib/errors';
 import {
   BoarderMembershipStatus,
+  ExpenseStatus,
   PaymentMethod,
   PaymentChannel,
   PaymentStatus,
   AuditAction,
+  NotificationType,
 } from '@messmess/types';
 import type { RecordCashPaymentDto, SubmitDigitalPaymentDto } from './payment.schema';
+import { notificationService } from '../notification/notification.service';
 
 class PaymentService {
   // ─── Cash Payment Flow ──────────────────────────────────────────────────────
@@ -47,6 +50,15 @@ class PaymentService {
       targetType: 'Payment',
       targetId: payment.id,
       newState: { amount: dto.amount, channel: PaymentChannel.CASH_CHANNEL },
+    });
+
+    await notificationService.notifyUser({
+      userId: boarder.userId,
+      messId,
+      eventId: `payment.recorded:${payment.id}`,
+      type: NotificationType.PAYMENT_RECORDED,
+      href: `/mess/${messId}/payments`,
+      params: { amount: payment.amount.toString() },
     });
 
     return payment;
@@ -163,6 +175,15 @@ class PaymentService {
         },
       });
 
+      await notificationService.notifyAdmins({
+        messId,
+        eventId: `payment.submitted:${payment.id}`,
+        type: NotificationType.PAYMENT_SUBMITTED,
+        href: `/mess/${messId}/payments`,
+        params: { amount: payment.amount.toString() },
+        excludeUserId: boarderUserId,
+      });
+
       return payment;
     } catch (err: unknown) {
       // SRS §16/§28: unique(messId, transactionRef) — see Phase 2's
@@ -220,6 +241,14 @@ class PaymentService {
         targetId: updated.id,
         notes: reason,
       });
+      await notificationService.notifyUser({
+        userId: payment.boarderMembership.userId,
+        messId,
+        eventId: `payment.rejected:${updated.id}`,
+        type: NotificationType.PAYMENT_REJECTED,
+        href: `/mess/${messId}/payments`,
+        params: { amount: payment.amount.toString() },
+      });
       return updated;
     }
 
@@ -233,6 +262,14 @@ class PaymentService {
       action: AuditAction.PAYMENT_CONFIRMED,
       targetType: 'Payment',
       targetId: updated.id,
+    });
+    await notificationService.notifyUser({
+      userId: payment.boarderMembership.userId,
+      messId,
+      eventId: `payment.confirmed:${updated.id}`,
+      type: NotificationType.PAYMENT_CONFIRMED,
+      href: `/mess/${messId}/payments`,
+      params: { amount: payment.amount.toString() },
     });
     return updated;
   }
@@ -281,6 +318,14 @@ class PaymentService {
         targetId: updated.id,
         notes: reason,
       });
+      await notificationService.notifyUser({
+        userId: payment.boarderMembership.userId,
+        messId,
+        eventId: `payment.rejected:${updated.id}`,
+        type: NotificationType.PAYMENT_REJECTED,
+        href: `/mess/${messId}/payments`,
+        params: { amount: payment.amount.toString() },
+      });
       return updated;
     }
 
@@ -295,6 +340,14 @@ class PaymentService {
       targetType: 'Payment',
       targetId: updated.id,
       notes: reason,
+    });
+    await notificationService.notifyUser({
+      userId: payment.boarderMembership.userId,
+      messId,
+      eventId: `payment.confirmed:${updated.id}`,
+      type: NotificationType.PAYMENT_CONFIRMED,
+      href: `/mess/${messId}/payments`,
+      params: { amount: payment.amount.toString() },
     });
     return updated;
   }
@@ -358,6 +411,22 @@ class PaymentService {
       },
       orderBy: { initiatedAt: 'desc' },
     });
+  }
+
+  async getFundSummary(messId: string) {
+    const [payments, expenses] = await Promise.all([
+      prisma.payment.aggregate({
+        where: { messId, status: PaymentStatus.CONFIRMED },
+        _sum: { amount: true },
+      }),
+      prisma.expense.aggregate({
+        where: { messId, status: ExpenseStatus.ACTIVE },
+        _sum: { amount: true },
+      }),
+    ]);
+    const collected = new Prisma.Decimal(payments._sum.amount ?? 0);
+    const spent = new Prisma.Decimal(expenses._sum.amount ?? 0);
+    return { collected, spent, balance: collected.sub(spent) };
   }
 
   async getPayment(messId: string, paymentId: string) {

@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { boarderService } from './boarder.service';
 import { resolveTenant, resolveTenantLoose, requireMessAdmin } from '../../middleware/resolveTenant';
+import { requireManagerOrAdmin } from '../../middleware/requireManager';
 import { validate } from '../../middleware/validate';
 import {
   inviteBoarderSchema,
@@ -23,7 +24,7 @@ const router = Router({ mergeParams: true });
 router.get(
   '/',
   resolveTenant,
-  requireMessAdmin,
+  requireManagerOrAdmin, // PATCH(frontend): was requireMessAdmin — Managers need the roster for guest meals / cash payments
   validate(listBoardersQuerySchema, 'query'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -6,8 +6,9 @@ import {
   ConflictError,
   ActiveMembershipConflictError,
 } from '../../lib/errors';
-import { BoarderMembershipStatus, BoarderJoinVia, AuditAction } from '@messmess/types';
+import { BoarderMembershipStatus, BoarderJoinVia, AuditAction, NotificationType } from '@messmess/types';
 import type { InviteBoarderDto, ResidencyChangeDto } from './boarder.schema';
+import { notificationService } from '../notification/notification.service';
 
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -69,8 +70,13 @@ class BoarderService {
       newState: { invitedEmail: targetUser.email },
     });
 
-    // TODO(notifications): emit "Boarder invited" event once the Notification
-    // module (Phase 10) exists — SRS §25 event table.
+    await notificationService.notifyUser({
+      userId: targetUser.id,
+      messId,
+      eventId: `boarder.invited:${membership.id}`,
+      type: NotificationType.BOARDER_INVITED,
+      href: '/dashboard',
+    });
 
     return membership;
   }
@@ -155,6 +161,13 @@ class BoarderService {
       action: AuditAction.BOARDER_JOIN_REQUESTED,
       targetType: 'BoarderMembership',
       targetId: membership.id,
+    });
+
+    await notificationService.notifyAdmins({
+      messId,
+      eventId: `boarder.join-request:${membership.id}`,
+      type: NotificationType.JOIN_REQUEST_CREATED,
+      href: `/mess/${messId}/members`,
     });
 
     return membership;
@@ -272,6 +285,14 @@ class BoarderService {
         action: auditAction,
         targetType: 'BoarderMembership',
         targetId: updated.id,
+      });
+
+      await notificationService.notifyAdmins({
+        messId,
+        eventId: `boarder.joined:${updated.id}`,
+        type: NotificationType.MEMBER_JOINED,
+        href: `/mess/${messId}/members`,
+        excludeUserId: actorUserId,
       });
 
       return updated;

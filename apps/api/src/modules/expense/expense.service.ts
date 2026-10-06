@@ -8,8 +8,10 @@ import {
   ExpenseSourceType,
   ExpenseStatus,
   AuditAction,
+  NotificationType,
 } from '@messmess/types';
 import type { CreateExpenseDto } from './expense.schema';
+import { notificationService } from '../notification/notification.service';
 
 function parseDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
@@ -69,6 +71,17 @@ class ExpenseService {
       targetId: expense.id,
       newState: { amount: dto.amount, categoryId: dto.categoryId, status: expense.status },
     });
+
+    if (expense.status === ExpenseStatus.ACTIVE) {
+      await notificationService.notifyBoarders({
+        messId,
+        eventId: `expense.created:${expense.id}`,
+        type: NotificationType.EXPENSE_CREATED,
+        href: `/mess/${messId}/expenses`,
+        params: { amount: dto.amount },
+        excludeUserId: actorUserId,
+      });
+    }
 
     return expense;
   }

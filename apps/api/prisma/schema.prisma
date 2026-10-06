@@ -161,6 +161,20 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum OfflinePaymentMethod {
+  BKASH
+  NAGAD
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
+enum BillingPaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum FundHandoverStatus {
   DRAFT
   SUBMITTED
@@ -256,6 +270,9 @@ enum AuditAction {
   DIRECTOR_ACCEPTED
   DIRECTOR_REVOKED
   DIRECTOR_SUSPENDED
+  BILLING_PAYMENT_SUBMITTED
+  BILLING_PAYMENT_APPROVED
+  BILLING_PAYMENT_REJECTED
   // Boarder
   BOARDER_INVITED
   BOARDER_INVITE_DECLINED
@@ -361,6 +378,11 @@ model User {
   managerAssignments   ManagerAssignment[]
   refreshTokens        RefreshToken[]
   auditLogs            AuditLog[]             @relation("AuditActor")
+  notifications        Notification[]
+  chatMessages         ChatMessage[]
+  chatMessageReads     ChatMessageRead[]
+  billingRequests      BillingPaymentRequest[] @relation("BillingRequestOwner")
+  reviewedBillingRequests BillingPaymentRequest[] @relation("BillingRequestReviewer")
 
   @@map("users")
 }
@@ -414,7 +436,9 @@ model Mess {
   subscription         Subscription?
   shopOrders           ShopOrder[]
   notifications        Notification[]
+  chatMessages         ChatMessage[]
   auditLogs            AuditLog[]
+  billingPaymentRequests BillingPaymentRequest[]
 
   @@map("messes")
 }
@@ -1005,6 +1029,34 @@ model Subscription {
   @@map("subscriptions")
 }
 
+model BillingPaymentRequest {
+  id                String                      @id @default(cuid())
+  messId            String
+  requestedBy       String
+  reviewedBy        String?
+  plan              SubscriptionPlan
+  amount            Decimal                     @db.Decimal(12, 2)
+  method            OfflinePaymentMethod
+  paymentReference  String
+  proofUrl          String?
+  notes             String?
+  status            BillingPaymentRequestStatus @default(PENDING)
+  reviewNote        String?
+  requestedAt       DateTime                    @default(now())
+  reviewedAt        DateTime?
+  updatedAt         DateTime                    @updatedAt
+
+  mess      Mess @relation(fields: [messId], references: [id], onDelete: Restrict)
+  requester User @relation("BillingRequestOwner", fields: [requestedBy], references: [id], onDelete: Restrict)
+  reviewer  User? @relation("BillingRequestReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+
+  @@index([messId, status, requestedAt])
+  @@index([status, requestedAt])
+  @@unique([messId, paymentReference])
+  // At most one unresolved payment request per Mess; enforced in the additive SQL migration.
+  @@map("billing_payment_requests")
+}
+
 // ─── Shop ─────────────────────────────────────────────────────────────────────
 
 // ─── Vendor (multi-vendor marketplace readiness — SRS section23) ────────────────
@@ -1154,25 +1206,65 @@ model IntegrationRecord {
   @@map("integration_records")
 }
 
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model ChatMessage {
+  id              String    @id @default(cuid())
+  messId          String
+  userId          String
+  clientMessageId String?
+  content         String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  mess        Mess              @relation(fields: [messId], references: [id], onDelete: Cascade)
+  sender      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readReceipts ChatMessageRead[]
+
+  @@index([messId, createdAt])
+  @@index([messId, userId])
+  @@unique([userId, clientMessageId])
+  @@map("chat_messages")
+}
+
+model ChatMessageRead {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  seenAt    DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, seenAt])
+  @@map("chat_message_reads")
+}
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 model Notification {
-  id        String              @id @default(cuid())
-  messId    String?
-  userId    String
-  channel   NotificationChannel
-  type      String
-  title     String
-  body      String
-  data      Json?
-  isRead    Boolean             @default(false)
-  readAt    DateTime?
-  sentAt    DateTime?
-  createdAt DateTime            @default(now())
+  id             String              @id @default(cuid())
+  messId         String?
+  userId         String
+  channel        NotificationChannel @default(IN_APP)
+  type           String
+  title          String
+  body           String
+  data           Json?
+  idempotencyKey String?             @unique
+  isRead         Boolean             @default(false)
+  readAt         DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   mess Mess? @relation(fields: [messId], references: [id], onDelete: SetNull)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
   @@index([messId])
   @@map("notifications")
 }

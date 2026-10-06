@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { handoverService } from './handover.service';
-import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
+import { resolveTenant, requireMessAdmin, requireAdminOrManagerParty } from '../../middleware/resolveTenant';
 import { validate } from '../../middleware/validate';
 import {
   initiateHandoverSchema,
@@ -13,7 +13,7 @@ import {
 const router = Router({ mergeParams: true });
 
 // GET /api/v1/messes/:messId/handovers
-router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', resolveTenant, requireAdminOrManagerParty, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const handovers = await handoverService.listHandovers(req.tenant.messId);
     res.json({ success: true, data: { handovers } });
@@ -26,6 +26,7 @@ router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFun
 router.get(
   '/:handoverId',
   resolveTenant,
+  requireAdminOrManagerParty,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const handover = await handoverService.getHandover(req.tenant.messId, req.params.handoverId);
