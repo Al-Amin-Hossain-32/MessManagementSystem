@@ -4,6 +4,7 @@ import { disputeService } from './dispute.service';
 import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
 import { requireManagerOrAdmin } from '../../middleware/requireManager';
 import { validate } from '../../middleware/validate';
+import { assertSelfOrStaff } from '../../lib/messAuthz';
 import {
   raiseDisputeSchema,
   resolveDisputeSchema,
@@ -46,6 +47,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dispute = await disputeService.getDispute(req.tenant.messId, req.params.disputeId);
+      await assertSelfOrStaff(req.tenant.messId, req.auth.userId, dispute.raisedByBoarderId);
       res.json({ success: true, data: { dispute } });
     } catch (err) {
       next(err);

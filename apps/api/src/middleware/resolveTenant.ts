@@ -1,7 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { TenantAccessError, NotFoundError } from '../lib/errors';
-import { MessStatus, MessMembershipRole, MessMembershipStatus } from '@messmess/types';
+import { requireManagerOrAdmin } from './requireManager';
+import {
+  MessStatus,
+  MessMembershipRole,
+  MessMembershipStatus,
+  BoarderMembershipStatus,
+  ManagerAssignmentStatus,
+  DirectorRelationshipStatus,
+} from '@messmess/types';
 
 // Extend Request with tenant context
 declare global {
@@ -16,6 +24,11 @@ declare global {
         memberRole: MessMembershipRole | null;
         isPrimaryOwner: boolean;
         isCoAdmin: boolean;
+        isDirector?: boolean;
+        /** PATCH(frontend): caller is an ACTIVE / LEAVE_REQUESTED Boarder of this Mess. */
+        isBoarder?: boolean;
+        /** PATCH(frontend): caller has a PENDING_ACCEPTANCE or ACTIVE Manager assignment here. */
+        isManagerParty?: boolean;
       };
     }
   }
@@ -30,7 +43,12 @@ declare global {
  * This prevents tenant spoofing attacks.
  */
 export function resolveTenant(req: Request, _res: Response, next: NextFunction): Promise<void> {
-  return _resolveTenant(req, next, { requireMembership: true });
+  return _resolveTenant(req, next, { requireMembership: true, allowDirector: false });
+}
+
+/** Use only on read-only dashboard/financial routes where Director access is explicitly allowed. */
+export function resolveTenantForDirectorRead(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  return _resolveTenant(req, next, { requireMembership: true, allowDirector: true });
 }
 
 /**
@@ -43,13 +61,13 @@ export function resolveTenantLoose(
   _res: Response,
   next: NextFunction,
 ): Promise<void> {
-  return _resolveTenant(req, next, { requireMembership: false });
+  return _resolveTenant(req, next, { requireMembership: false, allowDirector: false });
 }
 
 async function _resolveTenant(
   req: Request,
   next: NextFunction,
-  options: { requireMembership: boolean },
+  options: { requireMembership: boolean; allowDirector: boolean },
 ): Promise<void> {
   try {
     const messId = req.params['messId'];
@@ -89,7 +107,49 @@ async function _resolveTenant(
     });
 
     if (!membership || membership.status !== MessMembershipStatus.ACTIVE) {
-      throw new TenantAccessError();
+      // PATCH(frontend): Boarders and Managers have no MessMembership row — they hold a
+      // BoarderMembership / ManagerAssignment instead. Let them resolve the tenant with
+      // NO admin flags; every admin route still gates on requireMessAdmin/requirePrimaryOwner.
+      const userId = req.auth.userId;
+      const [boarder, managerParty] = await Promise.all([
+        prisma.boarderMembership.findFirst({
+          where: {
+            messId,
+            userId,
+            status: { in: [BoarderMembershipStatus.ACTIVE, BoarderMembershipStatus.LEAVE_REQUESTED] },
+          },
+          select: { id: true },
+        }),
+        prisma.managerAssignment.findFirst({
+          where: {
+            messId,
+            userId,
+            status: { in: [ManagerAssignmentStatus.PENDING_ACCEPTANCE, ManagerAssignmentStatus.ACTIVE] },
+          },
+          select: { id: true },
+        }),
+      ]);
+      const director = options.allowDirector
+        ? await prisma.directorRelationship.findUnique({
+          where: { directorUserId_messId: { directorUserId: userId, messId } },
+          select: { status: true },
+        })
+        : null;
+      const isDirector = director?.status === DirectorRelationshipStatus.ACTIVE;
+      if (!boarder && !managerParty && !isDirector) {
+        throw new TenantAccessError();
+      }
+      req.tenant = {
+        messId,
+        memberRole: null,
+        isPrimaryOwner: false,
+        isCoAdmin: false,
+        isBoarder: !!boarder,
+        isManagerParty: !!managerParty,
+        isDirector,
+      };
+      next();
+      return;
     }
 
     const memberRole = membership.role as MessMembershipRole;
@@ -107,6 +167,27 @@ async function _resolveTenant(
   }
 }
 
+/** Allows an active Director only for endpoints whose handler is a read operation. */
+export function requireMessAdminOrDirectorRead(req: Request, _res: Response, next: NextFunction): void {
+  if (req.tenant?.isPrimaryOwner || req.tenant?.isCoAdmin || req.tenant?.isDirector) {
+    next();
+    return;
+  }
+  next(new TenantAccessError('Mess Admin or Director access required'));
+}
+
+export async function requireManagerOrAdminOrDirectorRead(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.tenant?.isDirector) {
+    next();
+    return;
+  }
+  await requireManagerOrAdmin(req, res, next);
+}
+
 /**
  * Guard: only PRIMARY_OWNER may proceed.
  * Must be used after resolveTenant.
@@ -117,6 +198,18 @@ export function requirePrimaryOwner(req: Request, _res: Response, next: NextFunc
     return;
   }
   next();
+}
+
+/**
+ * PATCH(frontend) Guard: Mess Admin OR anyone with a Manager assignment (pending/active).
+ * Used for handover reads, where the incoming Manager may not be ACTIVE yet.
+ */
+export function requireAdminOrManagerParty(req: Request, _res: Response, next: NextFunction): void {
+  if (req.tenant?.isPrimaryOwner || req.tenant?.isCoAdmin || req.tenant?.isManagerParty) {
+    next();
+    return;
+  }
+  next(new TenantAccessError('Admin or Manager access required'));
 }
 
 /**

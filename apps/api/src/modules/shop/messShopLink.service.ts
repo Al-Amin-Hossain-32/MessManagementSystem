@@ -6,7 +6,49 @@ import { AuditAction, IntegrationProcessingStatus } from '@messmess/types';
 
 class MessShopLinkService {
   async getLink(messId: string) {
-    return prisma.messShopLink.findFirst({ where: { messId, isDefault: true } });
+    return prisma.messShopLink.findFirst({
+      where: { messId, isDefault: true },
+      include: { shop: true },
+    });
+  }
+
+  async linkShop(messId: string, adminUserId: string, shopId: string) {
+    const { link, shop, previous } = await prisma.$transaction(async (tx) => {
+      const shop = await tx.shop.findFirst({
+        where: { id: shopId, status: 'ACTIVE' },
+        select: { id: true, name: true },
+      });
+      if (!shop) throw new NotFoundError('Active Shop');
+
+      const previous = await tx.messShopLink.findFirst({
+        where: { messId, isDefault: true },
+        include: { shop: { select: { id: true, name: true } } },
+      });
+      await tx.messShopLink.updateMany({
+        where: { messId, isDefault: true },
+        data: { isDefault: false },
+      });
+
+      const link = await tx.messShopLink.upsert({
+        where: { messId_shopId: { messId, shopId } },
+        create: { messId, shopId, isDefault: true },
+        update: { isDefault: true },
+        include: { shop: true },
+      });
+      return { link, shop, previous };
+    });
+
+    await auditService.log({
+      messId,
+      actorUserId: adminUserId,
+      action: AuditAction.MESS_SHOP_LINK_UPDATED,
+      targetType: 'MessShopLink',
+      targetId: link.id,
+      previousState: previous ? { shopId: previous.shopId, shopName: previous.shop.name } : undefined,
+      newState: { shopId, shopName: shop.name, isDefault: true },
+    });
+
+    return link;
   }
 
   async setDefaultExpenseCategory(messId: string, adminUserId: string, categoryId: string) {

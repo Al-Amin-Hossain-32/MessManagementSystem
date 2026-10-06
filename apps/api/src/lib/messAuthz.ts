@@ -1,9 +1,11 @@
 import { prisma } from './prisma';
+import { ForbiddenError } from './errors';
 import {
   MessMembershipStatus,
   MessMembershipRole,
   ManagerAssignmentStatus,
 } from '@messmess/types';
+import { isManagerAssignmentInPeriod } from './managerPeriod';
 
 /**
  * True if userId is an ACTIVE Primary Owner/Co-Admin OR the ACTIVE Manager
@@ -18,9 +20,9 @@ export async function isMessAdminOrManager(messId: string, userId: string): Prom
       where: { userId_messId: { userId, messId } },
       select: { role: true, status: true },
     }),
-    prisma.managerAssignment.findFirst({
+    prisma.managerAssignment.findMany({
       where: { messId, userId, status: ManagerAssignmentStatus.ACTIVE },
-      select: { id: true },
+      select: { startDate: true, endDate: true },
     }),
   ]);
 
@@ -30,5 +32,24 @@ export async function isMessAdminOrManager(messId: string, userId: string): Prom
     (membership.role === MessMembershipRole.PRIMARY_OWNER ||
       membership.role === MessMembershipRole.CO_ADMIN);
 
-  return isAdmin || !!managerAssignment;
+  return isAdmin || managerAssignment.some((assignment) =>
+    isManagerAssignmentInPeriod(assignment.startDate, assignment.endDate),
+  );
+}
+
+/**
+ * PATCH(frontend): a Boarder may read only records belonging to their own
+ * BoarderMembership; Admins/Managers may read any record in the Mess.
+ */
+export async function assertSelfOrStaff(
+  messId: string,
+  userId: string,
+  boarderMembershipId: string,
+): Promise<void> {
+  if (await isMessAdminOrManager(messId, userId)) return;
+  const own = await prisma.boarderMembership.findFirst({
+    where: { id: boarderMembershipId, messId, userId },
+    select: { id: true },
+  });
+  if (!own) throw new ForbiddenError('You can only view your own records');
 }

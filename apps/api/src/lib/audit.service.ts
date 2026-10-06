@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { logger } from './logger';
 import { AuditAction } from '@messmess/types';
+import type { Prisma } from '@prisma/client';
 
 interface AuditLogParams {
   messId?: string;
@@ -9,8 +10,8 @@ interface AuditLogParams {
   action: AuditAction;
   targetType?: string;
   targetId?: string;
-  previousState?: Record<string, unknown>;
-  newState?: Record<string, unknown>;
+  previousState?: Prisma.InputJsonValue;
+  newState?: Prisma.InputJsonValue;
   ipAddress?: string;
   userAgent?: string;
   notes?: string;

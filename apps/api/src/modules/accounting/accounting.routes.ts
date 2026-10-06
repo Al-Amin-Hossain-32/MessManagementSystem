@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { periodService } from './period.service';
 import { periodCloseService } from './periodClose.service';
 import { statementService } from './statement.service';
-import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
+import { resolveTenant, resolveTenantForDirectorRead, requireMessAdmin, requireMessAdminOrDirectorRead } from '../../middleware/resolveTenant';
+import { assertSelfOrStaff } from '../../lib/messAuthz';
 import { validate } from '../../middleware/validate';
 
 const router = Router({ mergeParams: true });
@@ -24,7 +25,7 @@ const createAdjustmentSchema = z.object({
 // GET /api/v1/messes/:messId/accounting/current-period
 router.get(
   '/current-period',
-  resolveTenant,
+  resolveTenantForDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const period = await periodService.getCurrentPeriod(req.tenant.messId);
@@ -36,7 +37,7 @@ router.get(
 );
 
 // GET /api/v1/messes/:messId/accounting/periods
-router.get('/periods', resolveTenant, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/periods', resolveTenantForDirectorRead, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const periods = await periodService.listPeriods(req.tenant.messId);
     res.json({ success: true, data: { periods } });
@@ -115,8 +116,8 @@ router.post(
 // GET /api/v1/messes/:messId/accounting/periods/:periodId/adjustments
 router.get(
   '/periods/:periodId/adjustments',
-  resolveTenant,
-  requireMessAdmin,
+  resolveTenantForDirectorRead,
+  requireMessAdminOrDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const adjustments = await periodCloseService.listAdjustments(
@@ -135,8 +136,8 @@ router.get(
 // GET /api/v1/messes/:messId/accounting/periods/:periodId/statements — Admin/Manager view all
 router.get(
   '/periods/:periodId/statements',
-  resolveTenant,
-  requireMessAdmin,
+  resolveTenantForDirectorRead,
+  requireMessAdminOrDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const statements = await statementService.listStatementsForPeriod(
@@ -188,13 +189,16 @@ router.get(
 // GET /api/v1/messes/:messId/accounting/statements/:statementId
 router.get(
   '/statements/:statementId',
-  resolveTenant,
+  resolveTenantForDirectorRead,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const statement = await statementService.getStatement(
         req.tenant.messId,
         req.params.statementId,
       );
+      if (!req.tenant.isDirector) {
+        await assertSelfOrStaff(req.tenant.messId, req.auth.userId, statement.boarderMembershipId);
+      }
       res.json({ success: true, data: { statement } });
     } catch (err) {
       next(err);

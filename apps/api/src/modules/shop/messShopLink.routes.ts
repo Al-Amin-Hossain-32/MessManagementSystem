@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { messShopLinkService } from './messShopLink.service';
 import { resolveTenant, requireMessAdmin } from '../../middleware/resolveTenant';
 import { validate } from '../../middleware/validate';
-import { updateMessShopLinkSchema } from './messShopLink.schema';
+import { linkShopSchema, updateMessShopLinkSchema } from './messShopLink.schema';
 
 const router = Router({ mergeParams: true });
 
@@ -15,6 +15,26 @@ router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFun
     next(err);
   }
 });
+
+// PUT /api/v1/messes/:messId/shop-link — Mess Admin links or changes the default Shop
+router.put(
+  '/',
+  resolveTenant,
+  requireMessAdmin,
+  validate(linkShopSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const link = await messShopLinkService.linkShop(
+        req.tenant.messId,
+        req.auth.userId,
+        req.body.shopId,
+      );
+      res.json({ success: true, data: { link } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // PATCH /api/v1/messes/:messId/shop-link — Admin sets the default Expense Category for Shop deliveries
 router.patch(

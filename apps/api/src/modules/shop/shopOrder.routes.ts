@@ -13,7 +13,7 @@ import {
 const router = Router({ mergeParams: true });
 
 // GET /api/v1/messes/:messId/shop-orders
-router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', resolveTenant, requireManagerOrAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orders = await shopOrderService.listOrdersForMess(req.tenant.messId, req.query.status as any);
     res.json({ success: true, data: { orders } });
@@ -23,7 +23,7 @@ router.get('/', resolveTenant, async (req: Request, res: Response, next: NextFun
 });
 
 // GET /api/v1/messes/:messId/shop-orders/:orderId
-router.get('/:orderId', resolveTenant, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:orderId', resolveTenant, requireManagerOrAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const order = await shopOrderService.getOrder(req.tenant.messId, req.params.orderId);
     res.json({ success: true, data: { order } });

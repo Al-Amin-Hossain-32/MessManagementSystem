@@ -34,6 +34,20 @@ export enum DirectorRelationshipStatus {
   EXPIRED = 'EXPIRED',
 }
 
+export enum OfflinePaymentMethod {
+  BKASH = 'BKASH',
+  NAGAD = 'NAGAD',
+  BANK_TRANSFER = 'BANK_TRANSFER',
+  CASH = 'CASH',
+  OTHER = 'OTHER',
+}
+
+export enum BillingPaymentRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export enum BoarderMembershipStatus {
   INVITED = 'INVITED',
   PENDING_APPROVAL = 'PENDING_APPROVAL',
@@ -130,6 +144,22 @@ export enum PaymentStatus {
   REVERSED = 'REVERSED',
 }
 
+export const NotificationType = {
+  BOARDER_INVITED: 'BOARDER_INVITED',
+  CO_ADMIN_INVITED: 'CO_ADMIN_INVITED',
+  DIRECTOR_INVITED: 'DIRECTOR_INVITED',
+  MANAGER_ASSIGNED: 'MANAGER_ASSIGNED',
+  JOIN_REQUEST_CREATED: 'JOIN_REQUEST_CREATED',
+  MEMBER_JOINED: 'MEMBER_JOINED',
+  EXPENSE_CREATED: 'EXPENSE_CREATED',
+  PAYMENT_RECORDED: 'PAYMENT_RECORDED',
+  PAYMENT_SUBMITTED: 'PAYMENT_SUBMITTED',
+  PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
+  PAYMENT_REJECTED: 'PAYMENT_REJECTED',
+} as const;
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+export type NotificationFilter = 'all' | 'unread' | 'read';
+
 export enum AccountingPeriodStatus {
   ACTIVE = 'ACTIVE',
   PREPARING = 'PREPARING',
@@ -175,6 +205,18 @@ export enum DisputeStatus {
   RESOLVED = 'RESOLVED',
   DISMISSED = 'DISMISSED',
   ESCALATED = 'ESCALATED',
+}
+
+export enum DisputeTargetType {
+  MEAL_RECORD = 'MEAL_RECORD',
+  PAYMENT = 'PAYMENT',
+  EXPENSE_ALLOCATION = 'EXPENSE_ALLOCATION',
+  STATEMENT = 'STATEMENT',
+}
+
+export enum NotificationChannel {
+  IN_APP = 'IN_APP',
+  EMAIL = 'EMAIL',
 }
 
 export enum GuestMealChargingPolicy {
@@ -251,6 +293,9 @@ export enum AuditAction {
   DIRECTOR_ACCEPTED = 'DIRECTOR_ACCEPTED',
   DIRECTOR_REVOKED = 'DIRECTOR_REVOKED',
   DIRECTOR_SUSPENDED = 'DIRECTOR_SUSPENDED',
+  BILLING_PAYMENT_SUBMITTED = 'BILLING_PAYMENT_SUBMITTED',
+  BILLING_PAYMENT_APPROVED = 'BILLING_PAYMENT_APPROVED',
+  BILLING_PAYMENT_REJECTED = 'BILLING_PAYMENT_REJECTED',
   BOARDER_INVITED = 'BOARDER_INVITED',
   BOARDER_INVITE_DECLINED = 'BOARDER_INVITE_DECLINED',
   BOARDER_JOIN_REQUESTED = 'BOARDER_JOIN_REQUESTED',

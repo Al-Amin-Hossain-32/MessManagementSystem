@@ -24,12 +24,15 @@ export interface AllocationStrategy {
  * last allocation so the sum always reconciles exactly to totalAmount — a
  * split can never silently gain or lose a paisa/cent.
  */
-function reconcileRounding(
+export function reconcileRounding(
   totalAmount: Prisma.Decimal,
   results: AllocationResult[],
 ): AllocationResult[] {
   if (results.length === 0) return results;
-  const rounded = results.map((r) => ({ ...r, allocatedAmount: r.allocatedAmount.toDecimalPlaces(2) }));
+  const rounded = results.map((r) => ({
+    ...r,
+    allocatedAmount: r.allocatedAmount.toDecimalPlaces(2),
+  }));
   const sum = rounded.reduce((s, r) => s.add(r.allocatedAmount), new Prisma.Decimal(0));
   const diff = totalAmount.sub(sum);
   if (!diff.isZero()) {

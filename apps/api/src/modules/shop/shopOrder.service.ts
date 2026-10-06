@@ -4,9 +4,13 @@ import { auditService } from '../../lib/audit.service';
 import { integrationBridgeService } from './integrationBridge.service';
 import { NotFoundError, ConflictError, ForbiddenError } from '../../lib/errors';
 import { ShopOrderStatus, IntegrationEventType, AuditAction } from '@messmess/types';
-import type { CreateShopOrderDto, ReplaceOrderLinesDto, RecordDeliveryDto } from './shopOrder.schema';
+import type {
+  CreateShopOrderDto,
+  ReplaceOrderLinesDto,
+  RecordDeliveryDto,
+} from './shopOrder.schema';
 
-const PRE_PROCESSING_STATUSES: ShopOrderStatus[] = [
+const PRE_PROCESSING_STATUSES: readonly string[] = [
   ShopOrderStatus.DRAFT,
   ShopOrderStatus.PLACED,
   ShopOrderStatus.CONFIRMED,
@@ -16,7 +20,10 @@ class ShopOrderService {
   // ─── Manager side ───────────────────────────────────────────────────────────
 
   /** Builds order lines with an immutable price snapshot captured NOW. */
-  private async buildOrderLines(shopId: string, orderLines: { productId: string; quantity: number }[]) {
+  private async buildOrderLines(
+    shopId: string,
+    orderLines: { productId: string; quantity: number }[],
+  ) {
     const productIds = orderLines.map((l) => l.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds }, shopId, isActive: true },
@@ -43,12 +50,17 @@ class ShopOrderService {
   }
 
   async createOrder(messId: string, managerUserId: string, dto: CreateShopOrderDto) {
-    const messShopLink = await prisma.messShopLink.findFirst({ where: { messId, isDefault: true } });
+    const messShopLink = await prisma.messShopLink.findFirst({
+      where: { messId, isDefault: true },
+    });
     if (!messShopLink) {
       throw new ConflictError('No default Shop is linked to this Mess yet');
     }
 
-    const { lineData, totalAmount } = await this.buildOrderLines(messShopLink.shopId, dto.orderLines);
+    const { lineData, totalAmount } = await this.buildOrderLines(
+      messShopLink.shopId,
+      dto.orderLines,
+    );
 
     const order = await prisma.shopOrder.create({
       data: {
@@ -265,7 +277,9 @@ class ShopOrderService {
       order.status !== ShopOrderStatus.PROCESSING &&
       order.status !== ShopOrderStatus.PARTIALLY_DELIVERED
     ) {
-      throw new ConflictError('Only a PROCESSING or PARTIALLY_DELIVERED order can receive a delivery');
+      throw new ConflictError(
+        'Only a PROCESSING or PARTIALLY_DELIVERED order can receive a delivery',
+      );
     }
 
     const lineMap = new Map(order.orderLines.map((l) => [l.id, l]));

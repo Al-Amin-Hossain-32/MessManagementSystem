@@ -10,15 +10,19 @@ import {
   MealRecordStatus,
   AuditAction,
 } from '@messmess/types';
-import { allocationStrategies, type EligibleBoarder, type AllocationResult } from './allocationStrategies';
+import {
+  allocationStrategies,
+  type EligibleBoarder,
+  type AllocationResult,
+} from './allocationStrategies';
 
 type BoarderWithResidency = {
   id: string;
-  residencies: { type: BoarderResidencyType }[];
+  residencies: { type: string }[];
 };
 
 type CategoryForFilter = {
-  eligibleMemberScope: ExpenseEligibleScope;
+  eligibleMemberScope: string;
   selectedMemberIds: string[];
 };
 

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { TenantAccessError } from '../lib/errors';
+import { isManagerAssignmentInPeriod } from '../lib/managerPeriod';
 import { ManagerAssignmentStatus } from '@messmess/types';
 
 declare global {
@@ -34,15 +35,11 @@ export async function requireActiveManager(
       throw new TenantAccessError('Mess ID is required');
     }
 
-    const now = new Date();
-
-    const assignment = await prisma.managerAssignment.findFirst({
+    const assignments = await prisma.managerAssignment.findMany({
       where: {
         messId,
         userId: req.auth.userId,
         status: ManagerAssignmentStatus.ACTIVE,
-        startDate: { lte: now },
-        endDate: { gte: now },
       },
       select: {
         id: true,
@@ -50,7 +47,11 @@ export async function requireActiveManager(
         startDate: true,
         endDate: true,
       },
+      orderBy: { assignedAt: 'desc' },
     });
+    const assignment = assignments.find((candidate) =>
+      isManagerAssignmentInPeriod(candidate.startDate, candidate.endDate),
+    );
 
     if (!assignment) {
       throw new TenantAccessError(

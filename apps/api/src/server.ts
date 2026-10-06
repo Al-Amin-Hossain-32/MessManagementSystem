@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import { createServer } from 'http';
 import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './lib/logger';
 import { connectDatabase, disconnectDatabase } from './lib/prisma';
+import { attachChatSocket } from './modules/chat/chat.socket';
 
 async function bootstrap() {
   try {
@@ -13,8 +15,9 @@ async function bootstrap() {
     await connectDatabase();
 
     const app = createApp();
-
-    const server = app.listen(env.PORT, () => {
+    const server = createServer(app);
+    const io = attachChatSocket(server);
+    server.listen(env.PORT, () => {
       logger.info(`🚀 API running on http://localhost:${env.PORT}/api/v1`);
       logger.info(`📊 Health check: http://localhost:${env.PORT}/api/v1/health`);
     });
@@ -23,8 +26,8 @@ async function bootstrap() {
     const shutdown = async (signal: string) => {
       logger.info({ signal }, 'Shutdown signal received');
 
-      server.close(async () => {
-        logger.info('HTTP server closed');
+      io.close(async () => {
+        logger.info('HTTP and Socket.IO server closed');
         await disconnectDatabase();
         logger.info('Database disconnected. Goodbye.');
         process.exit(0);
